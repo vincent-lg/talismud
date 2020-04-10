@@ -143,7 +143,10 @@ class Process(metaclass=ABCMeta):
           2.  If frozen, executes 'portal'.
 
         """
-        self.logger.debug(f"Starting the {process_name!r} process")
         # Under Windows, specify a different creation flag
         creationflags = 0x08000000 if os.name == "nt" else 0
-        process = Popen(f"python {process_name}.py", creationflags=creationflags)
+        command = f"python {process_name}.py"
+        if getattr(sys, "frozen", False):
+            command = f"{process_name}.exe"
+        self.logger.debug(f"Starting the {process_name!r} process: {command!r}")
+        process = Popen(command, creationflags=creationflags)

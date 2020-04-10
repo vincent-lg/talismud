@@ -112,7 +112,7 @@ class Service(BaseService):
 
             # 3. Try to connect to CRUX again.  This time if it fails, it's an error.
             host.max_attempts = 10
-            host.timeout = 0.5
+            host.timeout = 2
             await host.connect_to_CRUX()
 
             if not host.connected:
@@ -159,7 +159,7 @@ class Service(BaseService):
         # 1. Connect to CRUX.  Success is expected.
         host = self.services["host"]
         host.max_attempts = 10
-        host.timeout = 0.5
+        host.timeout = 2
         await host.connect_to_CRUX()
 
         if not host.connected:
@@ -204,7 +204,7 @@ class Service(BaseService):
         # 1. Connect to CRUX.  Success is expected.
         host = self.services["host"]
         host.max_attempts = 10
-        host.timeout = 0.5
+        host.timeout = 2
         await host.connect_to_CRUX()
 
         if not host.connected:
