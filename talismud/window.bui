@@ -1,0 +1,6 @@
+<window title="TalisMUD - Control Panel">
+  <text x=0 y=0 width=6 id=status read-only multiline>Status</text>
+  <button x=0 y=2 id=start>Start TalisMUD</button>
+  <button x=2 y=2 id=restart disabled>Restart TalisMUD</button>
+  <button x=4 y=2 id=stop disabled>Stop TalisMUD</button>
+</window>

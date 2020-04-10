@@ -1,0 +1,17 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+bui.egg-info
+build
+dist
+pyenv
+
+# Test and coverage
+.coverage
+htmlcov
+
+# Log files
+*.log
+
+# Database
+*.db
