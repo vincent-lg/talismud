@@ -111,8 +111,8 @@ class Service(BaseService):
             self.process.start_process("portal")
 
             # 3. Try to connect to CRUX again.  This time if it fails, it's an error.
-            host.max_attempts = 10
-            host.timeout = 2
+            host.max_attempts = 20
+            host.timeout = 1
             await host.connect_to_CRUX()
 
             if not host.connected:
@@ -135,7 +135,7 @@ class Service(BaseService):
         # 5. The game process will send a 'register_game' command to CRUX.
         # 6. ... so wait for the 'registered_game' command to be received.
         success, args = await host.wait_for_cmd(host.reader, "registered_game",
-                timeout=5)
+                timeout=10)
         if success:
             game_id = args.get("game_id", "UNKNOWN")
             self.logger.info(f"... game started (id={game_id}).")
@@ -171,7 +171,7 @@ class Service(BaseService):
         await host.send_cmd(host.writer, "stop_portal")
 
         # 4. Wait for any command to be received.  None should.
-        await host.wait_for_cmd(host.reader, "*", timeout=5)
+        await host.wait_for_cmd(host.reader, "*", timeout=10)
         if host.connected:
             self.logger.error("The portal is still running, although asked to shudown.")
         else:
@@ -239,7 +239,7 @@ class Service(BaseService):
         # 6. The game process will send a 'register_game' command to CRUX.
         # 7. ... so wait for the 'registered_game' command to be received.
         success, args = await host.wait_for_cmd(host.reader, "registered_game",
-                timeout=5)
+                timeout=10)
         if success:
             game_id = args.get("game_id", "UNKNOWN")
             self.logger.info(f"... game started (id={game_id}).")

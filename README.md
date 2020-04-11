@@ -4,11 +4,15 @@ A MUD engine written in Python.
 
 ## Installation
 
-You should consider downloading the TalisMUD package without that installing like a library with `pip`.
+You should consider downloading the TalisMUD package without installing it like a library with `pip`.
 
-Just curious?  Then download the source code with executables:
+Just curious?  Then download the source code with executables: [ZIP archive](https://github.com/vincent-lg/talismud/archive/master.zip)
 
-I'm serious, I want to deploy your tool and create my game with it.  Then clone this repository on Github and make your changes in your public or private repository.
+> I'm serious, I want to deploy your tool and create my game with it.
+
+Then clone this repository on Github and make your changes in your public or private repository.
+
+    git clone https://github.com/vincent-lg/talismud.git
 
 > Why is it better to clone rather than download?
 
@@ -16,7 +20,7 @@ If you clone the repository, you can make your own changes to it.  But if I happ
 
 ## Ready to test, what should I do?
 
-If you're on Windows, you're lucky.  In the "src" directory you'll find three executables.  Click on the "talismud.exe" file.  A window will open telling you the game isn't running.  You can click on start and try things out.
+If you're on Windows, you're lucky.  In the "talismud" directory you'll find three executables.  Click on the "talismud.exe" file.  A window will open telling you the game isn't running.  You can click on start and try things out.
 
 But if you're not on Windows, don't worry too much.  You will need Python 3.8 and install the dependencies in "requirements.txt".  Then you can just:
 
@@ -40,9 +44,9 @@ Well, it's both simple and tricky.  Simple because the game is written in Python
 
 What's the advantages then, you'd ask?
 
-1. TalisMUD will take care eof the low-level and uglier aspects, letting you focus on what you want: creating a fun game.  It will enable you to quickly create both a good gameplay and story.  All you need to shine are ideas.
-2. Even if you're on Windows and running using the executables, should you happen to make a modification to one of the Python files, they'll be taken into account.  You don't have to "compile" or even "build" the executable again. Think of it as a Python executable with everything you'll need to work in your game, a Python executable that remains the important ability to read Python source files.
-3. Found a bug in your game?  No panic!  You can restart the game without losing any connection.  Your players will experience a very brief (say one second) of lag in which their commands will be stored for later.  In this second, TalisMUD will shutdown the game and restarts it.  You can modify the source code, fix a bug or whatever, your modifications will appear after this restart.  And no one will be disconnected.  Talking about a great playing experience.
+1. TalisMUD will take care of the low-level and uglier aspects, letting you focus on what you want: creating a fun game.  It will enable you to quickly create both a good gameplay and excellent stories.  All you need to shine are ideas.
+2. Even if you're on Windows and running using the executables, should you happen to make a modification to one of the Python files, they'll be taken into account.  You don't have to "compile" or even "build" the executable again.  Think of it as a Python executable with everything you'll need to work in your game, a Python executable that remains the important ability to read Python source files.
+3. Found a bug in your game?  Don't panic!  You can restart the game without losing any connection.  Your players will experience a very brief (say one second) lag during which their commands will be stored for later.  In this second, TalisMUD will shutdown the game and restart it.  You can modify the source code, fix a bug or whatever, your modifications will appear after this restart.  And no one will be disconnected.  Talking about a great playing experience.
 
 ## Okay... perhaps I want to try.  Where to begin?
 
