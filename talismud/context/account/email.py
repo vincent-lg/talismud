@@ -74,7 +74,7 @@ class Email(BaseContext):
                     "choose another email address.")
             return
 
-        self.session.storage.set("email", email)
+        self.session.storage["email"] = email
         await self.msg(
             f"Thank you!  Your email address, {email}, "
             "was successfully registered."

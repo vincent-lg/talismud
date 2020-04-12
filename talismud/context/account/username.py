@@ -88,5 +88,5 @@ class Username(BaseContext):
             return
 
         await self.msg(f"You selected the username: {username!r}.")
-        self.session.storage.set("username", username)
+        self.session.storage["username"] = username
         await self.move("account.create_password")

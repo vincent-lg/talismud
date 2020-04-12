@@ -30,6 +30,7 @@
 """Session entity."""
 
 import asyncio
+from collections.abc import MutableMapping
 import pickle
 from typing import Union
 from uuid import UUID, uuid4
@@ -107,19 +108,57 @@ class Session(PicklableEntity, db.Entity):
         await OUTPUT.put((self.uuid, encoded))
 
 
-class StorageHandler:
+class StorageHandler(MutableMapping):
 
-    """Handler for storing data in a dictionary."""
+    """
+    Handler for storing data in a dictionary.
+
+    The storage handler is an object which uses a binary representation,
+    stored in the entity itself.  It has all the methods one can expect
+    from a dictionary and can be used as such.
+
+        >>> session.storage["username"] = "someone"
+        >>> session.storage["username"]
+        'someone'
+        >>> len(session.storage)
+        1
+        >>> del session.storage["username"]
+        >>> sesession.storage.get("username", "")
+        ''
+        >>> # ...
+
+    Because this binary is stored in the entity itself, the stored
+    information won't create new database rows.  Retrieving them will
+    be quicker than using attributes for instance.  However, such
+    is not the case should the storage grow to a large collection.
+    Therefore, it is still recommended to store "rather small"
+    data in the storage, and use attributes otherwise.
+
+    Also keep in mind that database queries won't be able to look for
+    a particular information in the storage.  You cannot ask to retrieve
+    each session having, say, a stored "username" of "someone".
+    That's another strength of attributes.
+
+    """
+
+    __slots__ = ("owner", "data")
 
     def __init__(self, owner):
         self.owner = owner
         self.data = pickle.loads(owner.db_storage)
 
-    def get(self, key, default=None):
-        """Get the key from the storage."""
-        return self.data.get(key, default)
+    def __len__(self):
+        return len(self.data)
 
-    def set(self, key, value):
-        """Set the value for this key."""
+    def __iter__(self):
+        return iter(self.data)
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __setitem__(self, key, value):
         self.data[key] = value
         self.owner.db_storage = pickle.dumps(self.data)
+
+    def __delitem__(self, key):
+        del self.data[key]
