@@ -223,8 +223,8 @@ class BaseContext:
             possible_paths = ", ".join([str(possible) for possible in
                     possible_paths])
             raise ModuleNotFoundError(
-                    "can't find {context_path!r} to import, tried "
-                    "{possible_paths}"
+                    f"can't find {context_path!r} to import, tried "
+                    f"{possible_paths}"
             )
 
         # Try to import the path

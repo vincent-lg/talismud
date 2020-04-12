@@ -27,34 +27,52 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""New account context, displayed when one wishes to create a new account."""
+"""Confirm password context, displayed when one wishes to confirm a new password."""
 
 from context.base import BaseContext
+import settings
 
-class NewAccount(BaseContext):
+class ConfirmPassword(BaseContext):
 
     """
-    Context called when the user wishes to create a new account.
+    Context to confirm a new password for a new account.
 
     Input:
-        <new username>: valid username, move to account.create_password.
-        <invalid>: invalid username, gives reason and stays here.
-        /: slash, go back to connection.home.
+        <identical password>: valid password, move to account.email.
+        <different passwords>: go back to account.create_password.
+        /: slash, go back to account.create_password.
 
     """
 
     text = """
-        New user, welcome to TalisMUD!
+        You've chosen your password.  Please retype it now, to make sure
+        you entered it correctly.  If you make a mistake don't
+        worry, you'll be asked to create a new passord again.
 
-        You wish to create a new account.  The first step for you is
-        to create a username.  This username (and the password you will
-        select next) will be needed to access your characters.
-        You should choose both a username and password no one can easily
-        guess.
-
-        Please enter your username here:
+        Confirm your new password:
     """
 
-    async def input(self, command):
+    async def input(self, password):
         """The user entered something."""
-        await self.msg(f"New account? {command!r}")
+        original = self.session.storage.get("password", "")
+
+        if not original:
+            await self.msg(
+                "How did you get here?  Something went wrong, sorry, "
+                "better to enter a new password."
+            )
+            await self.move("account.create_password")
+            return
+
+        # Check that the passwords aren't different
+        if original != password:
+            await self.msg(
+                "Oops, it seems you didn't enter the same password.  "
+                "To be certain, let's go back to the previous step."
+            )
+            await self.move("account.create_password")
+            return
+
+        # That's the correct password
+        await self.msg("Thanks for confirming your password.")
+        await self.move("account.email")

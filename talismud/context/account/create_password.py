@@ -27,32 +27,49 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Home, the first active node in the login/chargen process."""
+"""Create password context, displayed when one wishes to create a new account."""
 
 from context.base import BaseContext
+import settings
 
-class Home(BaseContext):
+class CreatePassword(BaseContext):
 
     """
-    Context displayed just after MOTD.
+    Context to create a new password for a new account.
 
     Input:
-        new: the user wishes to create a new account.
-        <existing account>: the user has an account and wishes to connect.
+        <valid password>: valid password, move to account.confirm_password.
+        <invalid password>: invalid password, gives reason and stays here.
+        /: slash, go back to account.new.
 
     """
 
     text = """
-        If you already have an account, enter its username.
-        Otrherwise, type 'new' to create a new account.
+        Now that you have chosen your account username, you should
+        choose a password.  Remember that both the username and password
+        will protect your characters on the game.  Other players will
+        not be able to see your username and will not know your password,
+        unless you tell them, which you shouldn't.
 
-        Your username:
+        Preferably choose a password which will be hard to guess, not just
+        a word from the dictionary.  You can include letters (without
+        or with accents), digits, special characters and so on.  Just
+        make sure your password isn't too short.
+
+        Your new password:
     """
 
-    async def input_new(self):
-        """The user has input 'new' to create a new account."""
-        await self.move("account.username")
+    async def input(self, password):
+        """The user entered something."""
+        # Check that the password isn't too short
+        if len(password) < settings.MIN_PASSWORD:
+            await self.msg(
+                f"This password is incorrect.  It should be "
+                f"at least {settings.MIN_PASSWORD} characters long.  "
+                "Please try again."
+            )
+            return
 
-    async def input(self, command):
-        """The user entered something else."""
-        await self.msg("Why? {command!r}")
+        await self.msg("You selected a password. Great!")
+        self.session.storage.set("password", password)
+        await self.move("account.confirm_password")
