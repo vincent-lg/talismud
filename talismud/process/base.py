@@ -32,7 +32,7 @@
 from abc import ABCMeta, abstractmethod
 import asyncio
 from importlib import import_module
-import os
+import platform
 from subprocess import Popen
 import sys
 from typing import Tuple
@@ -144,9 +144,13 @@ class Process(metaclass=ABCMeta):
 
         """
         # Under Windows, specify a different creation flag
-        creationflags = 0x08000000 if os.name == "nt" else 0
+        creationflags = 0x08000000 if platform.system() == "Windows" else 0
         command = f"python {process_name}.py"
         if getattr(sys, "frozen", False):
-            command = f"{process_name}.exe"
-        self.logger.debug(f"Starting the {process_name!r} process: {command!r}")
+            command = process_name
+            command += ".exe" if platform.system() == 'Windows' else ""
+
+        self.logger.debug(
+            f"Starting the {process_name!r} process: {command!r}"
+        )
         process = Popen(command, creationflags=creationflags)

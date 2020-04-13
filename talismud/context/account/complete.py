@@ -82,4 +82,6 @@ class Complete(BaseContext):
             await self.move("account.new")
             return
 
+        self.session.account = account
         await self.msg(f"The account {username!r} was created successfully.")
+        await self.move("character.name")
