@@ -27,10 +27,18 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Data package, to host database entities and data handlers."""
+"""Character entity, a playing character or non-playing character alike."""
 
-from data.account import Account
-from data.attribute import Attribute, AccountAttribute, SessionAttribute
-from data.character import Character
-from data.room import Room
-from data.session import Session
+from pony.orm import Optional, Required, Set
+
+from data.attribute import AttributeHandler
+from data.base import db, PicklableEntity
+from data.mixins import EntityMixins, HasLocation
+from data.properties import lazy_property
+import settings
+
+class Character(HasLocation, PicklableEntity, db.Entity, metaclass=EntityMixins):
+
+    """Character entity."""
+
+    name = Required(str, max_len=128)

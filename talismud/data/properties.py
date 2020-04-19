@@ -73,7 +73,7 @@ class LazyPropertyDescriptor:
             return self
 
         # The value might be cached in `memory`
-        identifier = (type(instance).__name__, instance.get_pk())
+        identifier = hash(instance)
         value = self.memory.get(identifier, _MISSING)
         if value is _MISSING:
             value = self.fget(instance)
@@ -85,7 +85,7 @@ class LazyPropertyDescriptor:
         if not self.fset:
             raise AttributeError("can't set attribute")
 
-        identifier = (type(instance).__name__, instance.get_pk())
+        identifier = hash(instance)
         self.fset(instance, value)
         self.memory[identifier] = value
 

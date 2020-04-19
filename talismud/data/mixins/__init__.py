@@ -27,10 +27,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Data package, to host database entities and data handlers."""
+"""Data mixins, to add data and methods to entities."""
 
-from data.account import Account
-from data.attribute import Attribute, AccountAttribute, SessionAttribute
-from data.character import Character
-from data.room import Room
-from data.session import Session
+from data.mixins.location import HasLocation
+from data.mixins.meta import EntityMixins

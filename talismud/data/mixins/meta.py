@@ -27,10 +27,44 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Data package, to host database entities and data handlers."""
+"""Metaclass for entities using mixins."""
 
-from data.account import Account
-from data.attribute import Attribute, AccountAttribute, SessionAttribute
-from data.character import Character
-from data.room import Room
-from data.session import Session
+from queue import Queue
+
+from pony.orm import Optional, Required, Set
+from pony.orm.core import EntityMeta
+
+class EntityMixins(EntityMeta):
+
+    """
+    Entity with mixins.
+
+    This metaclass is a slight wrapper to force down the attributes
+    defined in parent classes, so these attributes can be integrated in
+    the entity.
+
+    """
+
+    def __init__(entity, name, bases, cls_dict):
+        classes = Queue()
+        for cls in bases:
+            classes.put(cls)
+
+        # Flat explore of all base classes
+        while not classes.empty():
+            cls = classes.get()
+
+            # Add the current child class to the mixin
+            method = getattr(cls, "extend_entity", None)
+            if method:
+                method(entity)
+
+            children = getattr(cls, "children", None)
+            if children is not None:
+                children.append(entity)
+
+            # Explore the parent class
+            for parent in cls.__bases__:
+                classes.put(parent)
+
+        super().__init__(name, bases, cls_dict)

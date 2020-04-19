@@ -71,7 +71,7 @@ class Service(BaseService):
         self.logger.debug("data: preparing to initialize the database.")
         file_path = str((Path() / "talismud.db").absolute())
         db.bind(provider='sqlite', filename=file_path, create_db=True)
-        set_sql_debug(True)
+        #set_sql_debug(True)
         db.generate_mapping(create_tables=True)
         self.logger.debug("data: database initialized.")
         self.init_task = None
