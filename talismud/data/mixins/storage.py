@@ -79,7 +79,6 @@ class HasStorage:
     @staticmethod
     def extend_entity(cls):
         """Add entity attributes to the entity."""
-        print("Add db_storage to", cls)
         cls.db_storage = Required(bytes, default=pickle.dumps({}))
 
     @lazy_property

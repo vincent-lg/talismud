@@ -10,7 +10,7 @@ class TestLocation(BaseTest):
     def test_moving_character(self):
         """Move a character inside and outside of a room."""
         character = db.Character(name="test")
-        room1 = db.Room(title="here")
+        room1 = db.Room(title="here", barcode="1")
         self.assertIsNone(character.location)
         self.assertEqual(room1.contents, [])
 
@@ -22,7 +22,7 @@ class TestLocation(BaseTest):
         self.assertEqual(room1.contents, [character])
 
         # Move the character in a different room
-        room2 = db.Room(title="there")
+        room2 = db.Room(title="there", barcode="2")
         self.assertEqual(room2.contents, [])
         character.location = room2
         self.assertIs(character.location, room2)
@@ -41,7 +41,7 @@ class TestLocation(BaseTest):
         characters = []
 
         for i in range(5):
-            rooms.append(db.Room(title=f"here_{i}"))
+            rooms.append(db.Room(title=f"here_{i}", barcode=str(i)))
 
         for i in range(20):
             characters.append(db.Character(name=f"character_{i}"))
@@ -71,8 +71,8 @@ class TestLocation(BaseTest):
         self.assertIsNone(character1.location)
 
         # Now try to create several objects and a more complicated loop
-        room1 = db.Room(title="There")
-        room2 = db.Room(title="Somewhere else")
+        room1 = db.Room(title="There", barcode="1")
+        room2 = db.Room(title="Somewhere else", barcode="2")
         character2.location = character1
         character1.location = room2
         room2.location = room1

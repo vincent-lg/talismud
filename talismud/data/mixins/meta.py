@@ -37,7 +37,6 @@ from pony.orm.core import EntityMeta
 class HasMixins(EntityMeta):
     """Metaclass to override entity metaclass."""
     def __init__(entity, name, bases, cls_dict):
-        print("Wrap for", entity)
         classes = Queue()
         for cls in entity.__bases__:
             classes.put(cls)
