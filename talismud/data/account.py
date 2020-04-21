@@ -60,6 +60,7 @@ class Account(PicklableEntity, db.Entity):
     created_on = Required(datetime, default=datetime.utcnow)
     updated_on = Required(datetime, default=datetime.utcnow)
     sessions = Set("Session")
+    characters = Set("Character")
     attributes = Set("AccountAttribute")
 
     @lazy_property

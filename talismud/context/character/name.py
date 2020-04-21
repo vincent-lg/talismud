@@ -27,37 +27,39 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Metaclass for entities using mixins."""
+"""Name context, to create a new character's name."""
 
-from queue import Queue
+from context.base import BaseContext
+import settings
 
-from pony.orm import Optional, Required, Set
-from pony.orm.core import EntityMeta
+class Name(BaseContext):
 
-class HasMixins(EntityMeta):
-    """Metaclass to override entity metaclass."""
-    def __init__(entity, name, bases, cls_dict):
-        print("Wrap for", entity)
-        classes = Queue()
-        for cls in entity.__bases__:
-            classes.put(cls)
+    """
+    Context to enter the character's new name.
 
-        # Flat explore of all base classes
-        while not classes.empty():
-            cls = classes.get()
+    Input:
+        <valid>: valid name, move to character.complete.
+        <invalid>: invalid name, gives reason and stays here.
 
-            # Add the current child class to the mixin
-            method = getattr(cls, "extend_entity", None)
-            if method:
-                method(entity)
+    """
 
-            children = getattr(cls, "children", None)
-            if children is not None:
-                children.append(entity)
+    text = f"""
+        You are now about to create a new character in {settings.GAME_NAME}.
+        Enter the name of your character as others will see it in the game.
 
-            # Explore the parent class
-            for parent in cls.__bases__:
-                classes.put(parent)
+        Your new character's name:
+    """
 
-        entity.__class__ = EntityMeta
-        EntityMeta.__init__(entity, name, bases, cls_dict)
+    async def input(self, name):
+        """The user entered something."""
+        # Check that the name isn't a forbidden name
+        if name.lower() in settings.FORBIDDEN_CHARACTER_NAMES:
+            await self.msg(
+                f"The name {name!r} is forbidden.  Please "
+                "choose another one."
+            )
+            return
+
+        await self.msg(f"You selected the name: {name!r}.")
+        self.session.storage["character_name"] = name
+        await self.move("character.complete")

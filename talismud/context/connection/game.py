@@ -27,37 +27,39 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Metaclass for entities using mixins."""
+"""Game context, where commands can be entered.
 
-from queue import Queue
+This is the most important and used context.  Connected players go
+in this context, where they can type game commands through which
+most of their action is performed.
 
-from pony.orm import Optional, Required, Set
-from pony.orm.core import EntityMeta
+"""
 
-class HasMixins(EntityMeta):
-    """Metaclass to override entity metaclass."""
-    def __init__(entity, name, bases, cls_dict):
-        print("Wrap for", entity)
-        classes = Queue()
-        for cls in entity.__bases__:
-            classes.put(cls)
+from context.base import BaseContext
 
-        # Flat explore of all base classes
-        while not classes.empty():
-            cls = classes.get()
+class Game(BaseContext):
 
-            # Add the current child class to the mixin
-            method = getattr(cls, "extend_entity", None)
-            if method:
-                method(entity)
+    """Game context."""
 
-            children = getattr(cls, "children", None)
-            if children is not None:
-                children.append(entity)
+    async def enter(self):
+        """The session enters the context, check the character's location."""
+        character = self.session.character
+        location = character.storage.get("saved_location")
+        if character.location is None:
+            character.location = location
 
-            # Explore the parent class
-            for parent in cls.__bases__:
-                classes.put(parent)
+        await super().enter()
 
-        entity.__class__ = EntityMeta
-        EntityMeta.__init__(entity, name, bases, cls_dict)
+    async def greet(self):
+        """Just display the character's location."""
+        character = self.session.character
+        if character.location:
+            title = character.location.title
+        else:
+            title = "Unknown location... something's very wrong here!"
+
+        return title + "\n\nHP: 100"
+
+    async def input(self, command: str):
+        """The character has entered something."""
+        await self.msg(f"Command: {command!r}")

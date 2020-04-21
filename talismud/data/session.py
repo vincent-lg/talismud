@@ -30,8 +30,6 @@
 """Session entity."""
 
 import asyncio
-from collections.abc import MutableMapping
-import pickle
 from typing import Union
 from uuid import UUID, uuid4
 
@@ -40,12 +38,13 @@ from pony.orm import Optional, PrimaryKey, Required, Set
 from context.base import BaseContext
 from data.attribute import AttributeHandler
 from data.base import db, PicklableEntity
+from data.mixins import HasMixins, HasStorage
 from data.properties import lazy_property
 
 # Asynchronous queue of all session output messages
 OUTPUT = asyncio.Queue()
 
-class Session(PicklableEntity, db.Entity):
+class Session(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
 
     """
     Session entity.
@@ -67,7 +66,7 @@ class Session(PicklableEntity, db.Entity):
     context_path = Required(str, max_len=64)
     account = Optional("Account")
     attributes = Set("SessionAttribute")
-    db_storage = Required(bytes, default=pickle.dumps({}))
+    character = Optional("Character")
 
     @lazy_property
     def db(self):
@@ -83,11 +82,6 @@ class Session(PicklableEntity, db.Entity):
     def context(self, context):
         """Change the session's context."""
         self.context_path = type(context).__module__
-
-    @lazy_property
-    def storage(self):
-        """Return the handler for the session storage."""
-        return StorageHandler(self)
 
     async def msg(self, text: Union[str, bytes]):
         """
@@ -106,59 +100,3 @@ class Session(PicklableEntity, db.Entity):
             encoded = text
 
         await OUTPUT.put((self.uuid, encoded))
-
-
-class StorageHandler(MutableMapping):
-
-    """
-    Handler for storing data in a dictionary.
-
-    The storage handler is an object which uses a binary representation,
-    stored in the entity itself.  It has all the methods one can expect
-    from a dictionary and can be used as such.
-
-        >>> session.storage["username"] = "someone"
-        >>> session.storage["username"]
-        'someone'
-        >>> len(session.storage)
-        1
-        >>> del session.storage["username"]
-        >>> sesession.storage.get("username", "")
-        ''
-        >>> # ...
-
-    Because this binary is stored in the entity itself, the stored
-    information won't create new database rows.  Retrieving them will
-    be quicker than using attributes for instance.  However, such
-    is not the case should the storage grow to a large collection.
-    Therefore, it is still recommended to store "rather small"
-    data in the storage, and use attributes otherwise.
-
-    Also keep in mind that database queries won't be able to look for
-    a particular information in the storage.  You cannot ask to retrieve
-    each session having, say, a stored "username" of "someone".
-    That's another strength of attributes.
-
-    """
-
-    __slots__ = ("owner", "data")
-
-    def __init__(self, owner):
-        self.owner = owner
-        self.data = pickle.loads(owner.db_storage)
-
-    def __len__(self):
-        return len(self.data)
-
-    def __iter__(self):
-        return iter(self.data)
-
-    def __getitem__(self, key):
-        return self.data[key]
-
-    def __setitem__(self, key, value):
-        self.data[key] = value
-        self.owner.db_storage = pickle.dumps(self.data)
-
-    def __delitem__(self, key):
-        del self.data[key]

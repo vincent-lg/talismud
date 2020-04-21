@@ -29,7 +29,7 @@
 
 """Base classes for data."""
 
-from pony.orm import Database
+from pony.orm import Database, OrmError, commit
 
 db = Database()
 
@@ -39,7 +39,9 @@ class PicklableEntity:
 
     def __reduce__(self):
         # Check that the parent __reduce__ works but don't use it
-        super().__reduce__()
+        if self.get_pk() is None:
+            commit()
+
         reduced = {}
         reduced["class"] = type(self)
         reduced["pk"] = self.get_pk()
@@ -52,4 +54,9 @@ def retrieve(reduced):
     if Entity is None or pk is None:
         return
 
-    return Entity[pk]
+    try:
+        entity = Entity[pk]
+    except OrmError:
+        return
+
+    return entity

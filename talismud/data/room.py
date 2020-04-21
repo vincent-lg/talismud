@@ -33,12 +33,16 @@ from pony.orm import Optional, Required, Set
 
 from data.attribute import AttributeHandler
 from data.base import db, PicklableEntity
-from data.mixins import EntityMixins, HasLocation
+from data.mixins import HasLocation, HasMixins
 from data.properties import lazy_property
 import settings
 
-class Room(HasLocation, PicklableEntity, db.Entity, metaclass=EntityMixins):
+class Room(HasLocation, PicklableEntity, db.Entity, metaclass=HasMixins):
 
     """Room entity."""
 
     title = Required(str, max_len=128)
+    x = Optional(int)
+    y = Optional(int)
+    z = Optional(int)
+    barcode = Required(str, max_len=32, unique=True, index=True)

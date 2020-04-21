@@ -75,3 +75,12 @@ FORBIDDEN_USERNAMES = ("talismud", "test", "guest", "new")
 
 # Minimum length of password (in characters)
 MIN_PASSWORD = 6
+
+# Forbidden character names
+FORBIDDEN_CHARACTER_NAMES = FORBIDDEN_USERNAMES
+
+# Starting room for new characters, enter the room barcode (str)
+START_ROOM = "begin"
+
+# Room if the character location has been destroyed while she was away
+RETURN_ROOM = "begin"

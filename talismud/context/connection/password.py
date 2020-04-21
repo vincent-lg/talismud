@@ -27,37 +27,31 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Metaclass for entities using mixins."""
+"""Account password context."""
 
-from queue import Queue
+from context.base import BaseContext
 
-from pony.orm import Optional, Required, Set
-from pony.orm.core import EntityMeta
+class Password(BaseContext):
 
-class HasMixins(EntityMeta):
-    """Metaclass to override entity metaclass."""
-    def __init__(entity, name, bases, cls_dict):
-        print("Wrap for", entity)
-        classes = Queue()
-        for cls in entity.__bases__:
-            classes.put(cls)
+    """Context to enter the account's password."""
 
-        # Flat explore of all base classes
-        while not classes.empty():
-            cls = classes.get()
+    text = """
+        Enter your accoun't password.
 
-            # Add the current child class to the mixin
-            method = getattr(cls, "extend_entity", None)
-            if method:
-                method(entity)
+        Your password:
+    """
 
-            children = getattr(cls, "children", None)
-            if children is not None:
-                children.append(entity)
+    async def input(self, password):
+        """Check the account's password."""
+        account = self.session.storage.get("account")
+        if account is None:
+            await self.msg("A problem occurred, please try logging in again.")
+            await self.move("account.home")
+            return
 
-            # Explore the parent class
-            for parent in cls.__bases__:
-                classes.put(parent)
-
-        entity.__class__ = EntityMeta
-        EntityMeta.__init__(entity, name, bases, cls_dict)
+        if account.is_correct_password(password):
+            await self.msg("Correct password!")
+            self.session.account = account
+            await self.move("connection.characters")
+        else:
+            await self.msg("Incorrect password.  Please try again.")

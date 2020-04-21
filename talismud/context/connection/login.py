@@ -27,37 +27,42 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Metaclass for entities using mixins."""
+"""Ghost context to connect a session and a character.
 
-from queue import Queue
+This context will attempt to connect the current session with an existing
+character, recorded in the session storage, and redirect to
+"connection.game" (the connected mode for all players, where
+they can enter commands).
 
-from pony.orm import Optional, Required, Set
-from pony.orm.core import EntityMeta
+"""
 
-class HasMixins(EntityMeta):
-    """Metaclass to override entity metaclass."""
-    def __init__(entity, name, bases, cls_dict):
-        print("Wrap for", entity)
-        classes = Queue()
-        for cls in entity.__bases__:
-            classes.put(cls)
+from context.base import BaseContext
+from data.room import Room
+import settings
 
-        # Flat explore of all base classes
-        while not classes.empty():
-            cls = classes.get()
+class Login(BaseContext):
 
-            # Add the current child class to the mixin
-            method = getattr(cls, "extend_entity", None)
-            if method:
-                method(entity)
+    """Ghost context to connect a character to an active session."""
 
-            children = getattr(cls, "children", None)
-            if children is not None:
-                children.append(entity)
+    async def refresh(self):
+        """Try to create a character."""
+        character = self.session.storage.get("character")
 
-            # Explore the parent class
-            for parent in cls.__bases__:
-                classes.put(parent)
+        # Check that all data are filled
+        if character is None:
+            await self.msg(
+                "Hmmm... something went wrong.  What was your character name again?"
+            )
+            await self.move("character.name")
+            return
 
-        entity.__class__ = EntityMeta
-        EntityMeta.__init__(entity, name, bases, cls_dict)
+        character.session = self.session
+        location = character.storage.get("saved_location")
+        if location is None:
+            location = Room.get(barcode=settings.RETURN_ROOM)
+
+        if character.location is None:
+            character.storage["saved_location"] = location
+            character.location = location
+
+        await self.move("connection.game")

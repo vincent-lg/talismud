@@ -30,6 +30,7 @@
 """Home, the first active node in the login/chargen process."""
 
 from context.base import BaseContext
+from data.account import Account
 
 class Home(BaseContext):
 
@@ -44,7 +45,7 @@ class Home(BaseContext):
 
     text = """
         If you already have an account, enter its username.
-        Otrherwise, type 'new' to create a new account.
+        Otherwise, type 'new' to create a new account.
 
         Your username:
     """
@@ -53,6 +54,15 @@ class Home(BaseContext):
         """The user has input 'new' to create a new account."""
         await self.move("account.username")
 
-    async def input(self, command):
+    async def input(self, username: str):
         """The user entered something else."""
-        await self.msg("Why? {command!r}")
+        username = username.lower()
+        account = Account.get(username=username)
+        if account is None:
+            await self.msg(
+                f"The account {username!r} couldn't be found.  If you "
+                "want to create it, type 'new', otherwise try another name.")
+            return
+
+        self.session.storage["account"] = account
+        await self.move("connection.password")

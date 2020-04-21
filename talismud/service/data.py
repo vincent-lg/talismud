@@ -36,6 +36,7 @@ from pony.orm import commit, db_session, set_sql_debug
 
 from data.base import db
 from service.base import BaseService
+import settings
 
 class Service(BaseService):
 
@@ -71,7 +72,7 @@ class Service(BaseService):
         self.logger.debug("data: preparing to initialize the database.")
         file_path = str((Path() / "talismud.db").absolute())
         db.bind(provider='sqlite', filename=file_path, create_db=True)
-        #set_sql_debug(True)
+        set_sql_debug(True)
         db.generate_mapping(create_tables=True)
         self.logger.debug("data: database initialized.")
         self.init_task = None
@@ -83,6 +84,21 @@ class Service(BaseService):
         # Open a DBSession and cached, to be persisted during all the
         # project lifetime.
         db_session._enter()
+
+        # Create the START_ROOM and RETURN_ROOM if they don't exist
+        start_room = return_room = None
+        if db.Room.get(barcode=settings.START_ROOM) is None:
+            start_room = db.Room(barcode=settings.START_ROOM,
+                    title="Welcome to TalisMUD!")
+            self.logger.info(f"The start room was created.")
+
+        if db.Room.get(barcode=settings.RETURN_ROOM) is None:
+            return_room = db.Room(barcode=settings.RETURN_ROOM,
+                    title="A grey void")
+            self.logger.info(f"The return room was created.")
+
+        if start_room or return_room:
+            commit()
 
     def create_session(self, session_id):
         """Create a new, empty session in the database, return it."""

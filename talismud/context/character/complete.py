@@ -27,37 +27,49 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Metaclass for entities using mixins."""
+"""Ghost context to complete a new character.
 
-from queue import Queue
+This context will attempt to create a character and will then move to
+another.  The user has no chance to input.  It's more a "responsible"
+context than an active context.
 
-from pony.orm import Optional, Required, Set
-from pony.orm.core import EntityMeta
+"""
 
-class HasMixins(EntityMeta):
-    """Metaclass to override entity metaclass."""
-    def __init__(entity, name, bases, cls_dict):
-        print("Wrap for", entity)
-        classes = Queue()
-        for cls in entity.__bases__:
-            classes.put(cls)
+from pony.orm import commit, OrmError
 
-        # Flat explore of all base classes
-        while not classes.empty():
-            cls = classes.get()
+from context.base import BaseContext
+from data.character import Character
+from data.room import Room
+import settings
 
-            # Add the current child class to the mixin
-            method = getattr(cls, "extend_entity", None)
-            if method:
-                method(entity)
+class Complete(BaseContext):
 
-            children = getattr(cls, "children", None)
-            if children is not None:
-                children.append(entity)
+    """Ghost context to create a character."""
 
-            # Explore the parent class
-            for parent in cls.__bases__:
-                classes.put(parent)
+    async def refresh(self):
+        """Try to create a character."""
+        name = self.session.storage.get("character_name")
 
-        entity.__class__ = EntityMeta
-        EntityMeta.__init__(entity, name, bases, cls_dict)
+        # Check that all data are filled
+        if name is None:
+            await self.msg(
+                "Hmmm... something went wrong.  What was your character name again?"
+            )
+            await self.move("character.name")
+            return
+
+        # Attempt to create the character
+        try:
+            character = Character(name=name)
+            commit()
+        except OrmError:
+            await self.msg("Some error occurred.  We'll have to try again.")
+            await self.move("character.name")
+            return
+
+        character.account = self.session.account
+        self.session.storage["character"] = character
+        character.storage["saved_location"] = Room.get(
+                barcode=settings.START_ROOM)
+        await self.msg(f"The character named {name} was created successfully.")
+        await self.move("connection.login")

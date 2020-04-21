@@ -27,23 +27,53 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Character entity, a playing character or non-playing character alike."""
+"""Display the list of characters for this account."""
 
-from datetime import datetime
+from textwrap import dedent
 
-from pony.orm import Optional, Required, Set
-
-from data.attribute import AttributeHandler
-from data.base import db, PicklableEntity
-from data.mixins import HasLocation, HasMixins, HasStorage
-from data.properties import lazy_property
+from context.base import BaseContext
+from data import Character
 import settings
 
-class Character(HasLocation, HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
+class Characters(BaseContext):
 
-    """Character entity."""
+    """Context do display the account's characters."""
 
-    name = Required(str, max_len=128)
-    session = Optional("Session")
-    account = Optional("Account")
-    created_on = Required(datetime, default=datetime.utcnow)
+    async def greet(self):
+        """Display the chaqracter's screen."""
+        account = self.session.account
+        screen = dedent(f"""
+            Welcome to your account, {account.username}!
+
+            You can select your characters here.  Enter a number to
+            play one of these characters or the letter 'c' to create a new one.
+
+            Available characters:
+        """.strip("\n"))
+
+        for i, character in enumerate(
+                account.characters.sort_by(Character.created_on)):
+            screen += f"\n  {i + 1} to play {character.name}"
+
+        screen += "\n\n" + dedent("""
+            Type 'c' to create a new character.
+        """.strip("\n"))
+
+        return screen
+
+    async def input_c(self):
+        """The player has entered 'c'."""
+        await self.move("character.name")
+
+    async def input(self, command: str):
+        """Expecting a character number."""
+        account = self.session.account
+        command = command.lower().strip()
+        for i, character in enumerate(
+                account.characters.sort_by(Character.created_on)):
+            if str(i + 1) == command:
+                self.session.storage["character"] = character
+                await self.move("connection.login")
+                return
+
+        await self.msg("Invalid command.")

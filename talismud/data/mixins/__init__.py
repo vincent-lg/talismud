@@ -30,4 +30,5 @@
 """Data mixins, to add data and methods to entities."""
 
 from data.mixins.location import HasLocation
-from data.mixins.meta import EntityMixins
+from data.mixins.meta import HasMixins
+from data.mixins.storage import HasStorage
