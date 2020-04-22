@@ -99,6 +99,7 @@ class Service(BaseService):
 
         if start_room or return_room:
             commit()
+        db.Delay.schedule()
 
     def create_session(self, session_id):
         """Create a new, empty session in the database, return it."""

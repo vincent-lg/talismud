@@ -47,10 +47,11 @@ from pony.orm import Optional, Required, Set
 
 from data.attribute import AttributeHandler
 from data.base import db, PicklableEntity
+from data.mixins import HasMixins, HasStorage
 from data.properties import lazy_property
 import settings
 
-class Account(PicklableEntity, db.Entity):
+class Account(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
 
     """Account entity, to connect a session to characters."""
 

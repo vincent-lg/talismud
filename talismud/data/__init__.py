@@ -32,5 +32,6 @@
 from data.account import Account
 from data.attribute import Attribute, AccountAttribute, SessionAttribute
 from data.character import Character
+from data.delay import Delay
 from data.room import Room
 from data.session import Session
