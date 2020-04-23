@@ -35,11 +35,12 @@ from pony.orm import Optional, Required, Set
 
 from data.attribute import AttributeHandler
 from data.base import db, PicklableEntity
-from data.mixins import HasLocation, HasMixins, HasStorage
+from data.mixins import HasLocation, HasMixins, HasStorage, HasTags
 from data.properties import lazy_property
 import settings
 
-class Character(HasLocation, HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
+class Character(HasLocation, HasStorage, HasTags, PicklableEntity, db.Entity,
+        metaclass=HasMixins):
 
     """Character entity."""
 
