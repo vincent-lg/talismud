@@ -32,6 +32,8 @@
 import asyncio
 from datetime import datetime, timedelta
 from importlib import import_module
+from inspect import iscoroutine
+from pathlib import Path
 import pickle
 from typing import Callable, Union
 
@@ -83,6 +85,16 @@ class Delay(PicklableEntity, db.Entity, metaclass=HasMixins):
           stores the path to the class method name and the instance is
           pickled as a first argument.
 
+    The specified callback can also be a coroutine, which makes things
+    easier to call asynchronous code.
+
+        async def tell(character):
+            await character.msg("The end.")
+
+        Delay.call_in(5, tell(character))
+        # ... or, but less user-friendly
+        Delay.call_in(3, tell, character)
+
     """
 
     expire_at = Required(datetime)
@@ -107,7 +119,17 @@ class Delay(PicklableEntity, db.Entity, metaclass=HasMixins):
 
         """
         instance = getattr(callable, "__self__", None)
-        if instance: # Instance or classmethod
+        if iscoroutine(callable):
+            # Look for the module
+            filename = Path(callable.cr_code.co_filename)
+            absolute = Path().absolute()
+            relative = filename.relative_to(absolute)
+            name = ".".join(relative.parts)
+            name = name[:-3]
+            name += f".{callable.__qualname__}"
+            args = ()
+            kwargs = callable.cr_frame.f_locals
+        elif instance: # Instance or classmethod
             if isinstance(instance, type): # Class method
                 ccls = instance
             else: # Instance method
