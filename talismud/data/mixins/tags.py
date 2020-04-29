@@ -144,7 +144,6 @@ class TagHandler:
 
     def remove(self, tag_name: str, category: ty.Optional[str] = None):
         """Remove the given tag."""
-        breakpoint()
         tags = self.__holder.db_tags.filter(lambda t: t.name == tag_name)
         if category is not None:
             tags = tags.filter(category=category)

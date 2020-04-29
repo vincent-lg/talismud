@@ -27,49 +27,39 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Character entity, a playing character or non-playing character alike."""
+"""Text argument."""
 
-from datetime import datetime
-import pickle
+from typing import Optional, Union
 
-from pony.orm import Optional, Required, Set
+from command.args.base import ArgSpace, Argument, ArgumentError, Result
 
-from command.layer import StaticCommandLayer
-from command.stack import CommandStack
-from data.attribute import AttributeHandler
-from data.base import db, PicklableEntity
-from data.mixins import (
-        HasCache, HasLocation, HasMixins, HasPermissions,
-        HasStorage, HasTags
-)
-from data.properties import lazy_property
-import settings
+class Text(Argument):
 
-class Character(HasCache, HasLocation, HasPermissions, HasStorage, HasTags,
-        PicklableEntity, db.Entity, metaclass=HasMixins):
+    """Text class for argument."""
 
-    """Character entity."""
+    name = "text"
+    space = ArgSpace.UNKNOWN
+    in_namespace = True
 
-    name = Required(str, max_len=128)
-    session = Optional("Session")
-    account = Optional("Account")
-    created_on = Required(datetime, default=datetime.utcnow)
-    db_command_stack = Optional(bytes)
+    def __init__(self, dest, optional=False):
+        super().__init__(dest, optional=optional)
 
-    @lazy_property
-    def command_stack(self):
-        """Return the stored or newly-bulid command stack."""
-        stored = self.db_command_stack
-        if stored:
-            return pickle.loads(stored)
+    def __repr__(self):
+        return "<Text arg>"
 
-        # Create a new command stack
-        stack = CommandStack(self)
-        # Add the static command layer as first layer
-        stack.add_layer(StaticCommandLayer)
-        return stack
+    def parse(self, string: str, begin: int = 0,
+            end: Optional[int] = None) -> Union[Result, ArgumentError]:
+        """
+        Parse the argument.
 
-    async def msg(self, text):
-        """Send text to the connected session, if any."""
-        if self.session:
-            await self.session.msg(text)
+        Args:
+            string (str): the string to parse.
+            begin (int): the beginning of the string to parse.
+            end (int, optional): the end of the string to parse.
+
+        Returns:
+            result (Result or ArgumentError).
+
+        """
+        end = end or len(string)
+        return Result(begin=begin, end=end, string=string)

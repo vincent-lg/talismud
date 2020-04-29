@@ -27,49 +27,21 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Character entity, a playing character or non-playing character alike."""
+"""Package to hold all commands, plus base utilities for commands.
 
-from datetime import datetime
-import pickle
+Static commands are contained in this package, sorted in sub-packages.  A package should contain at least one module, within which the command is defined.  It is possible to define packages inside packages with a command hierarchy, although in most cases the need doesn't arise (one command per file, one folder per category, that's usually more than enough).
 
-from pony.orm import Optional, Required, Set
+Grouping commands in categories offers several advantages:
+    The player sees commands grouped in the help file, which makes things easier to understand.
+    The category name can be defined in the package (`__init__.py` file)
+    The command permissions can be defined in the package file too.
 
-from command.layer import StaticCommandLayer
-from command.stack import CommandStack
-from data.attribute import AttributeHandler
-from data.base import db, PicklableEntity
-from data.mixins import (
-        HasCache, HasLocation, HasMixins, HasPermissions,
-        HasStorage, HasTags
-)
-from data.properties import lazy_property
-import settings
+In the case of package containing sub-packages, the categories
+is looked up in the deeper package first, and then, if not found,
+in parent packages.
 
-class Character(HasCache, HasLocation, HasPermissions, HasStorage, HasTags,
-        PicklableEntity, db.Entity, metaclass=HasMixins):
+"""
 
-    """Character entity."""
-
-    name = Required(str, max_len=128)
-    session = Optional("Session")
-    account = Optional("Account")
-    created_on = Required(datetime, default=datetime.utcnow)
-    db_command_stack = Optional(bytes)
-
-    @lazy_property
-    def command_stack(self):
-        """Return the stored or newly-bulid command stack."""
-        stored = self.db_command_stack
-        if stored:
-            return pickle.loads(stored)
-
-        # Create a new command stack
-        stack = CommandStack(self)
-        # Add the static command layer as first layer
-        stack.add_layer(StaticCommandLayer)
-        return stack
-
-    async def msg(self, text):
-        """Send text to the connected session, if any."""
-        if self.session:
-            await self.session.msg(text)
+from command.args import CommandArgs
+from command.base import Command
+from command.layer import CommandLayer

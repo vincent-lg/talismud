@@ -35,6 +35,8 @@ most of their action is performed.
 
 """
 
+from command.layer import StaticCommandLayer
+from command.stack import CommandStack
 from context.base import BaseContext
 
 class Game(BaseContext):
@@ -62,4 +64,13 @@ class Game(BaseContext):
 
     async def input(self, command: str):
         """The character has entered something."""
-        await self.msg(f"Command: {command!r}")
+        character = self.session.character
+        command = character.command_stack.find_command(command)
+        if isinstance(command, str):
+            # Can't find the command, display the error
+            await self.msg(command)
+            return
+
+        # Otherwise, parse the command
+        args = command.parse()
+        await command.run(args)

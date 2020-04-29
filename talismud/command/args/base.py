@@ -27,49 +27,69 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Character entity, a playing character or non-playing character alike."""
+"""Base argument."""
 
-from datetime import datetime
-import pickle
+from enum import Enum
+from typing import Optional, Union
 
-from pony.orm import Optional, Required, Set
+from command.args.error import ArgumentError
+from command.args.result import Result
 
-from command.layer import StaticCommandLayer
-from command.stack import CommandStack
-from data.attribute import AttributeHandler
-from data.base import db, PicklableEntity
-from data.mixins import (
-        HasCache, HasLocation, HasMixins, HasPermissions,
-        HasStorage, HasTags
-)
-from data.properties import lazy_property
-import settings
+ARG_TYPES = {}
 
-class Character(HasCache, HasLocation, HasPermissions, HasStorage, HasTags,
-        PicklableEntity, db.Entity, metaclass=HasMixins):
+class ArgSpace(Enum):
 
-    """Character entity."""
+    """Enumeration to define the space this argument takes."""
 
-    name = Required(str, max_len=128)
-    session = Optional("Session")
-    account = Optional("Account")
-    created_on = Required(datetime, default=datetime.utcnow)
-    db_command_stack = Optional(bytes)
+    UNKNOWN = 1
+    CHARACTER = 2
+    WORD = 3
+    ALL = 4
 
-    @lazy_property
-    def command_stack(self):
-        """Return the stored or newly-bulid command stack."""
-        stored = self.db_command_stack
-        if stored:
-            return pickle.loads(stored)
 
-        # Create a new command stack
-        stack = CommandStack(self)
-        # Add the static command layer as first layer
-        stack.add_layer(StaticCommandLayer)
-        return stack
+class ArgMeta(type):
 
-    async def msg(self, text):
-        """Send text to the connected session, if any."""
-        if self.session:
-            await self.session.msg(text)
+    """Metaclass for arguments."""
+
+    def __init__(cls, name, bases, cls_dict):
+        if cls.name:
+            ARG_TYPES[cls.name] = cls
+
+
+class Argument(metaclass=ArgMeta):
+
+    """Base class for arguments."""
+
+    name = ""
+    space = ArgSpace.UNKNOWN
+    in_namespace = True
+
+    def __init__(self, dest, optional=False, **kwargs):
+        self.dest = dest
+        self.optional = optional
+
+    def __repr__(self):
+        return f"<Arg {self.name}>"
+
+    def parse(self, string: str, begin: int = 0,
+            end: Optional[int] = None) -> Union[Result, ArgumentError]:
+        """
+        Parse the argument.
+
+        This method should return either a valid result (`Result`
+        type) or an error (`ArgumentErro`).
+
+        Args:
+            string (str): the string to parse.
+            begin (int): the beginning of the string to parse.
+            end (int, optional): the end of the string to parse.
+
+        Returns:
+            result (Result or ArgumentError).
+
+        """
+        raise NotImplementedError
+
+    def raise_error(self, message: str):
+        """Raise an `ArgumentError` exception."""
+        raise ArgumentError(message)

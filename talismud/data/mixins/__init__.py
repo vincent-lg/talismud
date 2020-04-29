@@ -29,7 +29,9 @@
 
 """Data mixins, to add data and methods to entities."""
 
+from data.mixins.cache import HasCache
 from data.mixins.location import HasLocation
 from data.mixins.meta import HasMixins
+from data.mixins.permissions import HasPermissions
 from data.mixins.storage import HasStorage
 from data.mixins.tags import HasTags

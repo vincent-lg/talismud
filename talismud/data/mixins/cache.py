@@ -27,75 +27,60 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Storage mixin.
+"""Cache mixin.
 
-Contrary to attributes, a storage simply is an internatl dictionary-like
-object, stored in the database, as an additional field (db_storage)
-which contains only a binary (pickled dictionary).
+A cache is somewhat similar to a storage, but it doesn't store anything
+except in memory.  This is just a convenience to store non-persistent
+data that can still be retrieved, should the game restart, but that
+are stored in the cache for greater ease otherwise.
 
 """
 
 from collections.abc import MutableMapping
-import pickle
 
-from pony.orm import Required
-
-from data.base import db
 from data.properties import lazy_property
 
-class HasStorage:
+class HasCache:
 
     """
-    Mixin to add the notion of storage to an entity.
+    Mixin to add the cache to entities.
 
-    The storage handler is an object which uses a binary representation,
-    stored in the entity itself.  It has all the methods one can expect
-    from a dictionary and can be used as such.
+    The cache handler is an object that can be manipulated just like
+    a dictionary, in a similar way to the storage.  However, nothing
+    is stored in the database through the cache, the data isn't
+    persisted:
 
-        >>> session.storage["username"] = "someone"
-        >>> session.storage["username"]
-        'someone'
-        >>> len(session.storage)
-        1
-        >>> del session.storage["username"]
-        >>> sesession.storage.get("username", "")
-        ''
-        >>> # ...
-
-    Because this binary is stored in the entity itself, the stored
-    information won't create new database rows.  Retrieving them will
-    be quicker than using attributes for instance.  However, such
-    is not the case should the storage grow to a large collection.
-    Therefore, it is still recommended to store "rather small"
-    data in the storage, and use attributes otherwise.
-
-    Also keep in mind that database queries won't be able to look for
-    a particular information in the storage.  You cannot ask to retrieve
-    each session having, say, a stored "username" of "someone".
-    That's another strength of attributes.
+        >>> character.cache["gold"] = 5
+        >>> character.cache["gold"]
+        5
+        >>> del character.cache["gold"]
+        >>> character.cache["something"] = 1
+        >>> # ... assuming the game restarts here
+        ... character.cache.get("something", 0)
+        0
 
     """
 
     @staticmethod
     def extend_entity(cls):
         """Add entity attributes to the entity."""
-        cls.db_storage = Required(bytes, default=pickle.dumps({}))
+        pass
 
     @lazy_property
-    def storage(self):
-        """Return the handler for the storage."""
-        return StorageHandler(self)
+    def cache(self):
+        """Return the handler for the cache."""
+        return CacheHandler(self)
 
 
-class StorageHandler(MutableMapping):
+class CacheHandler(MutableMapping):
 
-    """Handler for storing data in a dictionary."""
+    """Handler for memorizing data in a dictionary."""
 
     __slots__ = ("owner", "data")
 
     def __init__(self, owner):
         self.owner = owner
-        self.data = pickle.loads(owner.db_storage)
+        self.data = {}
 
     def __len__(self):
         return len(self.data)
@@ -108,8 +93,6 @@ class StorageHandler(MutableMapping):
 
     def __setitem__(self, key, value):
         self.data[key] = value
-        self.owner.db_storage = pickle.dumps(self.data)
 
     def __delitem__(self, key):
         del self.data[key]
-        self.owner.db_storage = pickle.dumps(self.data)

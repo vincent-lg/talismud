@@ -27,49 +27,17 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Character entity, a playing character or non-playing character alike."""
+"""Argument result."""
 
-from datetime import datetime
-import pickle
+class Result:
 
-from pony.orm import Optional, Required, Set
+    """Result of a successful parsing of an argument."""
 
-from command.layer import StaticCommandLayer
-from command.stack import CommandStack
-from data.attribute import AttributeHandler
-from data.base import db, PicklableEntity
-from data.mixins import (
-        HasCache, HasLocation, HasMixins, HasPermissions,
-        HasStorage, HasTags
-)
-from data.properties import lazy_property
-import settings
+    def __init__(self, begin, end, string):
+        self.begin = begin
+        self.end = end
+        self.string = string
 
-class Character(HasCache, HasLocation, HasPermissions, HasStorage, HasTags,
-        PicklableEntity, db.Entity, metaclass=HasMixins):
-
-    """Character entity."""
-
-    name = Required(str, max_len=128)
-    session = Optional("Session")
-    account = Optional("Account")
-    created_on = Required(datetime, default=datetime.utcnow)
-    db_command_stack = Optional(bytes)
-
-    @lazy_property
-    def command_stack(self):
-        """Return the stored or newly-bulid command stack."""
-        stored = self.db_command_stack
-        if stored:
-            return pickle.loads(stored)
-
-        # Create a new command stack
-        stack = CommandStack(self)
-        # Add the static command layer as first layer
-        stack.add_layer(StaticCommandLayer)
-        return stack
-
-    async def msg(self, text):
-        """Send text to the connected session, if any."""
-        if self.session:
-            await self.session.msg(text)
+    @property
+    def success(self):
+        return self.string[self.begin:self.end]
