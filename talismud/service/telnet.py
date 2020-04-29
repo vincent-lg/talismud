@@ -31,10 +31,12 @@
 
 import asyncio
 from io import BytesIO
-from uuid import uuid4
+from typing import Union
+from uuid import UUID, uuid4
 
 from service.base import BaseService
 from service.mixins import CmdMixin
+import settings
 
 class Service(CmdMixin, BaseService):
 
@@ -204,3 +206,36 @@ class Service(CmdMixin, BaseService):
         writer = self.parent.game_writer
         if writer:
             await self.CRUX.send_cmd(writer, "input", dict(session_id=session_id, command=command))
+
+    async def write_to(self, session_id: UUID, message: Union[str, bytes]):
+        """
+        Send a message to this session.
+
+        Args:
+            session_id (UUID): the session ID.
+            message (str or bytes): the message to send.  If a
+                    str, encode it using the default encoding
+                    in the settings.
+
+        Should this method fail, the session will be disconnected.
+
+        """
+        if isinstance(message, str):
+            message = message.replace("\r\n", "\n").replace("\r", "\n")
+            message = message.encode(settings.DEFAULT_ENCODING,
+                    errors="replace")
+        else:
+            message = message.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+        if not message.endswith(b"\n"):
+            message += b"\n"
+
+        message = message.replace(b"\n", b"\r\n")
+
+        reader, writer = self.sessions.get(session_id, (None, None))
+        if writer:
+            try:
+                writer.write(message)
+                await writer.drain()
+            except ConnectionError:
+                await self.error_read(reader)
+                return

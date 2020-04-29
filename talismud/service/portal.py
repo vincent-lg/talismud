@@ -31,6 +31,7 @@
 
 import asyncio
 import base64
+import time
 
 from async_timeout import timeout as async_timeout
 
@@ -79,6 +80,9 @@ class Service(BaseService):
             self.game_reader = None
             self.game_writer = None
             self.logger.debug("The connection to the game is lost.")
+            crux = self.services["crux"]
+            for writer in crux.hosts.values():
+                await crux.send_cmd(writer, "game_stopped")
 
     async def handle_register_game(self, reader):
         """A new game process wants to be registered."""
@@ -133,6 +137,37 @@ class Service(BaseService):
             self.logger.warning("The game process hasn't stopped, though it should have.")
         else:
             self.logger.debug("The game process has stopped.")
+
+    async def handle_restart_game(self, reader, announce=True):
+        """Restart the game."""
+        if announce:
+            # Announce to all contected clients
+            telnet = self.services["telnet"]
+            for session_id in telnet.sessions.keys():
+                await telnet.write_to(session_id, "Restarting the game ...")
+
+        await self.handle_stop_game(reader)
+        origin = time.time()
+        while time.time() - origin < 5:
+            if self.game_id is None:
+                await self.handle_start_game(reader)
+                break
+
+            await asyncio.sleep(0.1)
+
+        # Wait for the game to register again
+        origin = time.time()
+        while time.time() - origin < 5:
+            if self.game_id:
+                break
+
+            await asyncio.sleep(0.1)
+
+        if announce and self.game_id:
+            # Announce to all contected clients
+            telnet = self.services["telnet"]
+            for session_id in telnet.sessions.keys():
+                await telnet.write_to(session_id, "... game restarted!")
 
     async def handle_stop_portal(self, reader):
         """Handle the stop_portal command."""

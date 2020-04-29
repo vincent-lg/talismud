@@ -84,3 +84,8 @@ START_ROOM = "begin"
 
 # Room if the character location has been destroyed while she was away
 RETURN_ROOM = "begin"
+
+# 5. Display settings
+# Preferred encoding for new sessions without a configuration.
+# (Individual clients/players can change that setting for their connection.)
+DEFAULT_ENCODING = "utf-8"

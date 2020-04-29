@@ -184,20 +184,18 @@ class Service(BaseService):
         Order of operations:
             1.  Connect to CRUX.  It should succeed.
             2.  Send the 'stop_game' command to CRUX.
-            3.  CRUX will send a 'stop_game' command to the game host.
-            4.  Keep sending the 'game_id' command to CRUX until `None`
-                is sent back, indicating that no game is connected to
-                CRUX.
-            5.  Send the `start_game` command to CRUX.
-            6.  The portal will start the `game` process.  The game will
+            3.  CRUX will send a 'restart_game' command to the game host.
+            3.  Listen for the `stopped_game` command, that will
+                be sent when the game has disconnected.
+            4.  The portal will start the `game` process.  The game will
                 attempt to connect to the portal and send a command to it
                 to register.
-            7.  On receiving the 'register_game' command, the portal will
+            5.  On receiving the 'register_game' command, the portal will
                 check that no other game has been registered, assign an
                 ID for clarity to it, send the 'registered_game' command
                 with the new game ID to all hosts.  This includes the
                 launcher at this point.
-            8.  Wait for the `registered_game` command to be issued.  If it
+            6.  Wait for the `registered_game` command to be issued.  If it
                 is, report success to the user.
 
         """
@@ -211,33 +209,23 @@ class Service(BaseService):
             self.logger.warning("The portal seems to be off, the game isn't running.")
             return
 
-        # 2. Send the 'stop_game' command
+        # 2. Send the 'restart_game' command
         self.logger.info("Hame stopping ...")
-        await host.send_cmd(host.writer, "stop_game")
-        # 3. The portal should stop the game process.
-        # 4. Keep sending 'what_game_id'
-        reader = host.reader
-        game_id = "UNKNOWN"
-        try:
-            with async_timeout(5):
-                await host.send_cmd(host.writer, "what_game_id")
-                while game_id := (await host.wait_for_cmd(reader,
-                        "game_id", timeout=1))[1].get("game_id"):
-                    await host.send_cmd(host.writer, "what_game_id")
-        except asyncio.TimeoutError:
-            pass
+        await host.send_cmd(host.writer, "restart_game", dict(announce=True))
 
-        if game_id is not None:
+        # 3. The portal should stop the game process...
+        # ... and restart it.
+        # 4. Listen for the 'stopped_game' command.
+        success, args = await host.wait_for_cmd(host.reader, "game_stopped",
+                timeout=10)
+        if not success:
             self.logger.warning("The game is still running.")
             return
 
         self.logger.info("... game stopped.")
         self.logger.info("Start game ...")
-        # 5. Send the 'start_game' command to CRUX.
-        await host.send_cmd(host.writer, "start_game")
-
-        # 6. The game process will send a 'register_game' command to CRUX.
-        # 7. ... so wait for the 'registered_game' command to be received.
+        # 5. The game process will send a 'register_game' command to CRUX.
+        # 6. ... so wait for the 'registered_game' command to be received.
         success, args = await host.wait_for_cmd(host.reader, "registered_game",
                 timeout=10)
         if success:
