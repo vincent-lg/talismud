@@ -32,7 +32,7 @@
 import asyncio
 
 from data.base import db
-from data.session import OUTPUT
+from data.session import CMDS_TO_PORTAL, OUTPUT
 
 from service.base import BaseService
 
@@ -55,17 +55,21 @@ class Service(BaseService):
         """
         self.game_id = None
         self.output_task = None
+        self.cmds_task = None
         self.sessions = {}
 
     async def setup(self):
         """Set the game up."""
         self.services["host"].schedule_hook("connected", self.connected_to_CRUX)
         self.output_task = asyncio.create_task(self.spread_output())
+        self.cmds_task = asyncio.create_task(self.spread_cmds_to_portal())
 
     async def cleanup(self):
         """Clean the service up before shutting down."""
         if self.output_task:
             self.output_task.cancel()
+        if self.cmds_task:
+            self.cmds_task.cancel()
 
     async def connected_to_CRUX(self, writer):
         """The host is connected to the CRUX server."""
@@ -76,6 +80,11 @@ class Service(BaseService):
     async def error_read(self):
         """Cannot read from CRUX anymore, prepare to shut down."""
         self.logger.warning(f"A read error happened on the connection to CRUX, stop the process.")
+        self.process.should_stop.set()
+
+    async def error_write(self):
+        """Cannot write to CRUX anymore, prepare to shut down."""
+        self.logger.warning(f"A write error happened on the connection to CRUX, stop the process.")
         self.process.should_stop.set()
 
     async def spread_output(self):
@@ -97,6 +106,23 @@ class Service(BaseService):
                 await host.send_cmd(host.writer, "output", dict(
                         session_id=session_id, output=text))
 
+    async def spread_cmds_to_portal(self):
+        """Begin listening for the command queue."""
+        try:
+            await self.listen_for_cmds_to_portal()
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            self.logger.exception("An error occurred while listening for the command queue:")
+
+    async def listen_for_cmds_to_portal(self):
+        """Listen the command queue and send data accordingly."""
+        host = self.services["host"]
+        while True:
+            cmd_name, args = await CMDS_TO_PORTAL.get()
+
+            if host.writer:
+                await host.send_cmd(host.writer, cmd_name, args)
 
     # Command handlers
     async def handle_registered_game(self, reader, game_id, sessions):

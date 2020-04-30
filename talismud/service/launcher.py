@@ -75,6 +75,10 @@ class Service(BaseService):
         """A game ID has been sent by the portal, do nothing."""
         pass
 
+    async def handle_game_stopped(self, reader):
+        """The game service has been registered by CRUX."""
+        pass
+
     # User actions
     async def action_start(self):
         """

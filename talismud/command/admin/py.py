@@ -36,3 +36,4 @@ class Py(Command):
             await self.msg(traceback.format_exc())
         else:
             await self.msg(str(result))
+

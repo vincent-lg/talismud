@@ -60,11 +60,13 @@ class Service(CmdMixin, BaseService):
         """
         await super().init()
         self.serving_task = None
-        self.hosts = {}
+        self.readers = {}
+        self.writers = {}
 
     async def setup(self):
         """Set the CRUX server up."""
         self.schedule_hook("error_read", self.error_read)
+        self.schedule_hook("error_write", self.error_write)
         self.serving_task = asyncio.create_task(self.create_server())
 
     async def cleanup(self):
@@ -97,7 +99,8 @@ class Service(CmdMixin, BaseService):
         """Handle a new connection."""
         addr = writer.get_extra_info('peername')
         self.logger.debug(f"CRUX: {addr} has just connected.")
-        self.hosts[reader] = writer
+        self.readers[reader] = writer
+        self.writers[writer] = reader
         try:
             await self.read_commands(reader)
         except asyncio.CancelledError:
@@ -105,9 +108,20 @@ class Service(CmdMixin, BaseService):
 
     async def error_read(self, reader):
         """An error occurred when reading from reader."""
-        writer = self.hosts.pop(reader, None)
+        writer = self.readers.pop(reader, None)
         if writer is None:
             self.logger.error(f"CRUX: connection was lost with a host, but the associated writer cannot be found.")
         else:
+            self.writers.pop(writer)
             self.logger.warning("CRUX: connection to a host was closed.")
         await self.parent.error_read(writer)
+
+    async def error_write(self, writer):
+        """An error occurred when writing to writer."""
+        reader = self.writers.pop(writer, None)
+        if reader is None:
+            self.logger.error(f"CRUX: connection was lost with a host, but the associated reader cannot be found.")
+        else:
+            self.readers.pop(reader)
+            self.logger.warning("CRUX: connection to a host was closed.")
+        await self.parent.error_write(writer)

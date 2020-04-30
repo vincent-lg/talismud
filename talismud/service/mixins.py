@@ -71,6 +71,7 @@ class CmdMixin:
     async def init(self):
         """The service is initialized."""
         self.register_hook("error_read")
+        self.register_hook("error_write")
 
     async def read_commands(self, reader):
         """Enter an asynchronous loop to read commands from `reader`."""
@@ -172,8 +173,9 @@ class CmdMixin:
             writer.write(obj)
             await writer.drain()
         except (ConnectionError, asyncio.CancelledError):
-            pass
+            await self.call_hook("error_write", writer)
         except Exception:
+            await self.call_hook("error_write", writer)
             self.logger.exception("An error occurred on sending a command:")
 
     async def wait_for_cmd(self, reader, cmd_name, timeout=None):
@@ -202,12 +204,18 @@ class CmdMixin:
             return (None, {})
 
         try:
-            with async_timeout(timeout):
+            if timeout is not None:
+                timeout = timeout - (time.time() - begin)
+                timeout = max(timeout, 0.5)
+
+            async with async_timeout(timeout):
                 while received := await queue.get():
                     if received is None:
                         return (False, {})
 
                     if cmd_name == "*" or received[0] == cmd_name:
                         return (True, received[1])
-        except (asyncio.CancelledError, asyncio.TimeoutError):
+        except (asyncio.CancelledError, asyncio.TimeoutError) as err:
             return (False, {})
+        except Exception:
+            self.logger.exception("An error occurred while waiting.")

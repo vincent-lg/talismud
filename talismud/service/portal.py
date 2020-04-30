@@ -49,7 +49,7 @@ class Service(BaseService):
         """Return the hosts of the CRUX service."""
         service = self.services.get("crux")
         if service:
-            return service.hosts
+            return service.readers
 
     async def init(self):
         """
@@ -81,8 +81,15 @@ class Service(BaseService):
             self.game_writer = None
             self.logger.debug("The connection to the game is lost.")
             crux = self.services["crux"]
-            for writer in crux.hosts.values():
+            for writer in crux.readers.values():
                 await crux.send_cmd(writer, "game_stopped")
+    error_write = error_read
+
+    async def check_eof(self, reader):
+        """Check if EOF has been sent."""
+        if reader.at_eof():
+            if reader is self.game_reader:
+                await self.error_read(self.game_writer)
 
     async def handle_register_game(self, reader):
         """A new game process wants to be registered."""
@@ -102,7 +109,7 @@ class Service(BaseService):
         self.game_reader = reader
         self.game_writer = writer
         sessions = list(self.services["telnet"].sessions.keys())
-        for writer in self.hosts.values():
+        for writer in tuple(self.hosts.values()):
             await self.services["crux"].send_cmd(writer, "registered_game",
                     dict(game_id=game_id, sessions=sessions))
 
@@ -124,14 +131,17 @@ class Service(BaseService):
         """Handle the stop_game command."""
         crux = self.services["crux"]
         if self.game_writer:
+            self.logger.debug(f"Sending 'stop_game' to game ID {self.game_id}...")
             await crux.send_cmd(self.game_writer, "stop_game", dict(game_id=self.game_id))
+        else:
+            self.logger.warning("Can't stop the game, it's already down it seems.")
+            return
 
-        try:
-            async with async_timeout(3):
-                while self.game_id:
-                    await crux.wait_for_cmd(self.game_reader, "*", 0.1)
-        except (asyncio.CancelledError, asyncio.TimeoutError):
-            pass
+        begin = time.time()
+        while time.time() - begin < 3 and self.game_id:
+            await crux.wait_for_cmd(self.game_reader, "*", 0.5)
+            if self.game_reader:
+                await self.check_eof(self.game_reader)
 
         if self.game_id:
             self.logger.warning("The game process hasn't stopped, though it should have.")
@@ -140,6 +150,7 @@ class Service(BaseService):
 
     async def handle_restart_game(self, reader, announce=True):
         """Restart the game."""
+        self.logger.debug("Asked to restart the game...")
         if announce:
             # Announce to all contected clients
             telnet = self.services["telnet"]
@@ -150,6 +161,7 @@ class Service(BaseService):
         origin = time.time()
         while time.time() - origin < 5:
             if self.game_id is None:
+                self.logger.debug("The game was stopped, now start it again.")
                 await self.handle_start_game(reader)
                 break
 
@@ -162,6 +174,9 @@ class Service(BaseService):
                 break
 
             await asyncio.sleep(0.1)
+
+        if not self.game_id:
+            self.logger.warning("The game should have started by now.")
 
         if announce and self.game_id:
             # Announce to all contected clients
@@ -182,4 +197,3 @@ class Service(BaseService):
         else:
             writer.write(output)
             await writer.drain()
-            self.logger.debug(f"Got {output!r} to session {session_id}.")

@@ -152,6 +152,10 @@ class Command:
         self.sep = sep
         self.arguments = arguments
 
+    @property
+    def session(self):
+        return self.character and self.character.session or None
+
     @classmethod
     def can_run(cls, character) -> bool:
         """

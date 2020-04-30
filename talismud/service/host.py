@@ -97,6 +97,7 @@ class Service(CmdMixin, BaseService):
         """Set the host client up."""
         # If the host service can't read, calls `error_read` asynchronously:
         self.schedule_hook("error_read", self.error_read)
+        self.schedule_hook("error_write", self.error_write)
 
         # Create the task to connect to CRUX
         self.connecting_task = asyncio.create_task(self.work_with_CRUX())
@@ -107,6 +108,11 @@ class Service(CmdMixin, BaseService):
             self.connecting_task.cancel()
         if self.reading_task:
             self.reading_task.cancel()
+        # Close the connection with the host
+        if self.writer:
+            self.logger.debug("host: closing the connection.")
+            self.writer.close()
+            await self.writer.wait_closed()
 
     async def work_with_CRUX(self):
         """Attempt to connect to CRUX, if needed."""
@@ -136,7 +142,7 @@ class Service(CmdMixin, BaseService):
             self.logger.debug(f"host: attemppting to connect to CRUX, {max_attempts} attempts remaining...")
             before = time.time()
             try:
-                with timeout(self.timeout):
+                async with timeout(self.timeout):
                     reader, writer = await asyncio.open_connection('127.0.0.1', 4005)
             except (ConnectionRefusedError, asyncio.TimeoutError) as err:
                 self.logger.debug(f"host: can't connect to CRUX, {err!r}")
@@ -168,3 +174,11 @@ class Service(CmdMixin, BaseService):
             self.reader = None
             self.writer = None
             await self.parent.error_read()
+
+    async def error_write(self, writer):
+        """An error occurred when trying to read from CRUX."""
+        if writer is self.writer:
+            self.connected = False
+            self.reader = None
+            self.writer = None
+            await self.parent.error_write()

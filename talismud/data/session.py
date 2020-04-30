@@ -30,7 +30,7 @@
 """Session entity."""
 
 import asyncio
-from typing import Union
+import typing as ty
 from uuid import UUID, uuid4
 
 from pony.orm import Optional, PrimaryKey, Required, Set
@@ -43,6 +43,7 @@ from data.properties import lazy_property
 
 # Asynchronous queue of all session output messages
 OUTPUT = asyncio.Queue()
+CMDS_TO_PORTAL = asyncio.Queue()
 
 class Session(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
 
@@ -83,7 +84,7 @@ class Session(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
         """Change the session's context."""
         self.context_path = type(context).__module__
 
-    async def msg(self, text: Union[str, bytes]):
+    async def msg(self, text: ty.Union[str, bytes]):
         """
         Send some text to the session.
 
@@ -100,3 +101,22 @@ class Session(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
             encoded = text
 
         await OUTPUT.put((self.uuid, encoded))
+
+    async def msg_portal(self, cmd_name: str, args: ty.Optional[dict] = None):
+        """
+        Send a command to the portal.
+
+        This highly-specialized method sends a command to the portal
+        process, through the CRUX server.  Using this method should
+        be reserved for small actions with a limited control, unless
+        you want to use the great power of some of these commands,
+        like "restart_game".  Be aware that sending a command to the
+        portal can do a lot of things, including damage.
+
+        Args:
+            cmd_name (str): the command name to send.
+            args (dict, optional): the arguments of this command.
+
+        """
+        args = args or {}
+        await CMDS_TO_PORTAL.put((cmd_name, args))
