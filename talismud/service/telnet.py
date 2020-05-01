@@ -201,6 +201,20 @@ class Service(CmdMixin, BaseService):
         if writer:
             await self.CRUX.send_cmd(writer, "new_session", dict(session_id=session_id))
 
+    async def disconnect_session(self, session_id: UUID):
+        """
+        Disconnect the given session.
+
+        Args:
+            session_id (UUID): the session to disconnect.
+
+        """
+        reader, writer = self.sessions.pop(session_id, (None, None))
+        if writer:
+            self.logger.debug(f"Diconnection session ID {session_id}.")
+            writer.close()
+            await writer.wait_closed()
+
     async def send_input(self, session_id: int, command: bytes):
         """Called when an input line was sent by the client."""
         writer = self.parent.game_writer

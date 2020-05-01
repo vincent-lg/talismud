@@ -32,14 +32,23 @@
 from abc import ABCMeta, abstractmethod
 import asyncio
 from importlib import import_module
+import os
 import platform
 from subprocess import Popen
 import sys
 from typing import Tuple
 
+# Import wintypes if on Windows
+if platform.system() == "Windows":
+    import ctypes
+    import ctypes.wintypes
+
 from logbook import FileHandler, StreamHandler
 
 from process.log import ProcessLogger
+
+# Still running (Windows).
+_STILL_ACTIVE = 259
 
 class Process(metaclass=ABCMeta):
 
@@ -57,7 +66,7 @@ class Process(metaclass=ABCMeta):
     def __init__(self):
         self.started = False
         self.services = {}
-        self.pid = None
+        self.pid = os.getpid()
         self.logger = ProcessLogger(self)
 
         # Configure the process logger
@@ -87,7 +96,7 @@ class Process(metaclass=ABCMeta):
     async def start(self):
         """Called when the process start."""
         self.should_stop = asyncio.Event()
-        self.logger.debug("Starting process...")
+        self.logger.debug(f"Starting process (PID={self.pid}...")
         for name in type(self).services:
             module_name = f"service.{name}"
             module = import_module(module_name)
@@ -121,6 +130,44 @@ class Process(metaclass=ABCMeta):
     async def cleanup(self):
         """Called when the process is about to be stopped."""
         pass
+
+    @staticmethod
+    def is_running(pid: int) -> bool:
+        """
+        Is the given process running?
+
+        Args:
+            Process ID (int): the process identifier (PID).
+
+        Returns:
+            running (bool): whether the process is running or not.
+
+        """
+        if platform.system() == "Windows":
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(1, 0, pid)
+            if handle == 0:
+                return False
+
+            # If the process exited recently, a PID may still
+            # exist for the handle.  So, check if we can get the exit code.
+            exit_code = ctypes.wintypes.DWORD()
+            is_running = (
+                kernel32.GetExitCodeProcess(handle,
+                ctypes.byref(exit_code)) == 0)
+            kernel32.CloseHandle(handle)
+
+            # See if we couldn't get the exit code or the exit code indicates
+            # that the process is still running.
+            return is_running and exit_code.value == _STILL_ACTIVE
+
+        # On Linux/Mac, just try to kill the process with signal 0.
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+
+        return True
 
     def start_process(self, process_name):
         """

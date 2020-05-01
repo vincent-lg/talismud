@@ -32,6 +32,7 @@
 import asyncio
 import base64
 import time
+from uuid import UUID
 
 from async_timeout import timeout as async_timeout
 
@@ -62,6 +63,7 @@ class Service(BaseService):
 
         """
         self.game_id = None
+        self.game_pid = None
         self.game_reader = None
         self.game_writer = None
 
@@ -91,7 +93,7 @@ class Service(BaseService):
             if reader is self.game_reader:
                 await self.error_read(self.game_writer)
 
-    async def handle_register_game(self, reader):
+    async def handle_register_game(self, reader, pid):
         """A new game process wants to be registered."""
         writer = self.hosts.get(reader)
         if writer is None:
@@ -104,8 +106,9 @@ class Service(BaseService):
             peer_name = b":".join([str(name).encode() for name in peer_name])
             game_id = base64.b64encode(peer_name).decode()
 
-        self.logger.debug(f"Receive register_game for ID={game_id}")
+        self.logger.debug(f"Receive register_game for ID={game_id}, PID={pid}")
         self.game_id = game_id
+        self.game_pid = pid
         self.game_reader = reader
         self.game_writer = writer
         sessions = list(self.services["telnet"].sessions.keys())
@@ -125,6 +128,26 @@ class Service(BaseService):
 
     async def handle_start_game(self, reader):
         """Handle the start_game command."""
+        if self.game_pid:
+            # The game is already running
+            self.logger.debug(
+                f"The game process (PID={self.game_pid}) hasn't "
+                "stopped yet.  Wait..."
+            )
+
+            loop = 30
+            while self.process.is_running(self.game_pid):
+                loop -= 1
+                if loop <= 0:
+                    self.logger.error(
+                        "The game process is still running, do "
+                        "not start a new one."
+                    )
+                    return
+                await asyncio.sleep(0.1)
+
+            self.game_pid = None
+
         self.process.start_process("game")
 
     async def handle_stop_game(self, reader):
@@ -197,3 +220,16 @@ class Service(BaseService):
         else:
             writer.write(output)
             await writer.drain()
+
+    async def handle_disconnect_session(self, reader, session_id: UUID):
+        """
+        Disconnect the given session from Telnet service.
+
+        Args:
+            session_id (UUID): the session ID to disconnect.
+
+        If important, the reason should have been given beforehand.
+
+        """
+        telnet = self.services["telnet"]
+        await telnet.disconnect_session(session_id)

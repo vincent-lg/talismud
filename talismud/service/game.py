@@ -75,7 +75,8 @@ class Service(BaseService):
         """The host is connected to the CRUX server."""
         service = self.services["host"]
         self.logger.debug("host: send register_game")
-        await service.send_cmd(writer, "register_game")
+        await service.send_cmd(writer, "register_game",
+                dict(pid=self.process.pid))
 
     async def error_read(self):
         """Cannot read from CRUX anymore, prepare to shut down."""
