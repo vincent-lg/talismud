@@ -31,6 +31,7 @@
 
 import argparse
 import asyncio
+from getpass import getpass
 
 from process.base import Process
 from window import TalismudWindow
@@ -69,7 +70,24 @@ class Launcher(Process):
 
         launcher = self.services["launcher"]
         if args.action == "start":
-            await launcher.action_start()
+            started = await launcher.action_start()
+            if started and not launcher.has_admin:
+                print(
+                        "There's no admin character on this game "
+                        "yet.  It would be better to create one now."
+                )
+                username = input("Username to create: ")
+                password = getpass("New account's password: ")
+                email = input("New account's email (can be blank): ")
+                success = await launcher.action_create_admin(username,
+                        password, email)
+                if success:
+                    print("The new admin account and password were created.")
+                else:
+                    print(
+                            "An error occurred while creating the "
+                            "admin account/password.  Please check the logs."
+                    )
         elif args.action == "stop":
             await launcher.action_stop()
         elif args.action == "restart":

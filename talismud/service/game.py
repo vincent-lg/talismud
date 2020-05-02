@@ -73,10 +73,11 @@ class Service(BaseService):
 
     async def connected_to_CRUX(self, writer):
         """The host is connected to the CRUX server."""
-        service = self.services["host"]
+        host = self.services["host"]
+        data = self.services["data"]
         self.logger.debug("host: send register_game")
-        await service.send_cmd(writer, "register_game",
-                dict(pid=self.process.pid))
+        await host.send_cmd(writer, "register_game",
+                dict(pid=self.process.pid, has_admin=data.has_admin))
 
     async def error_read(self):
         """Cannot read from CRUX anymore, prepare to shut down."""
@@ -126,7 +127,7 @@ class Service(BaseService):
                 await host.send_cmd(host.writer, cmd_name, args)
 
     # Command handlers
-    async def handle_registered_game(self, reader, game_id, sessions):
+    async def handle_registered_game(self, reader, game_id, sessions, **kwargs):
         """A new game process wants to be registered."""
         self.logger.debug(f"Receive registered_game for ID {game_id}")
         self.game_id = game_id
@@ -169,3 +170,47 @@ class Service(BaseService):
         context = session.context
         self.logger.debug(f"Received {command!r} from Telnet.")
         await context.handle_input(command)
+
+    async def handle_create_admin(self, reader, username: str,
+            password: str, email: str = ""):
+        """
+        Try to create an admin character and account.
+
+        Args:
+            reader (StreamReader): the reader for this command.
+            username (str): the username to create.
+            password (str): the plain text password to use.
+            email (str, optional): the new account's email address.
+
+        Response:
+            The 'created_admin' command with the result.
+
+        """
+        filters = {
+                "username": username,
+        }
+
+        if email:
+            filters.update({
+                    "email": email,
+            })
+
+        host = self.services["host"]
+        if db.Account.get(**filters):
+            if host.writer:
+                await host.send_cmd(host.writer, "created_admin",
+                        dict(success=False))
+
+            return
+
+        # Otherwise create the account
+        account = db.Account.create_with_password(username, password, email)
+
+        # Now create the character
+        character = account.characters.create(name=username.title())
+
+        # Give the new character admin permissions
+        character.permissions.add("admin")
+        if host.writer:
+            await host.send_cmd(host.writer, "created_admin",
+                    dict(success=True))

@@ -93,8 +93,20 @@ class Service(BaseService):
             if reader is self.game_reader:
                 await self.error_read(self.game_writer)
 
-    async def handle_register_game(self, reader, pid):
-        """A new game process wants to be registered."""
+    async def handle_register_game(self, reader, pid, has_admin=False):
+        """
+        A new game process wants to be registered.
+
+        Args:
+            reader (StreamReader): the reader associated with this command.
+            pid (int): the game's Process ID.
+            has_admin (bool, optional): whether an admin character exists.
+
+        On receiving this command, the portal will try to create a
+        unique identifier for the game, based on network information.
+        It will then broadcast a `registered_game` to all, with this ID.
+
+        """
         writer = self.hosts.get(reader)
         if writer is None:
             self.logger.error("A game wishes to be registered but there's no active writer/reader pair for the socket.")
@@ -114,7 +126,8 @@ class Service(BaseService):
         sessions = list(self.services["telnet"].sessions.keys())
         for writer in tuple(self.hosts.values()):
             await self.services["crux"].send_cmd(writer, "registered_game",
-                    dict(game_id=game_id, sessions=sessions))
+                    dict(game_id=game_id, sessions=sessions,
+                    pid=pid, has_admin=has_admin))
 
     async def handle_what_game_id(self, reader):
         """Return the game ID to the one querying for it."""
@@ -233,3 +246,41 @@ class Service(BaseService):
         """
         telnet = self.services["telnet"]
         await telnet.disconnect_session(session_id)
+
+    async def handle_create_admin(self, reader, username: str,
+            password: str, email: str = ""):
+        """
+        Send a 'create_admin' command to the game, to create a new admin.
+
+        Args:
+            reader (StreamReader): the reader for this command.
+            username (str): the username to create.
+            password (str): the plain text password to use.
+            email (str, optional): the new account's email address.
+
+        Response:
+            The 'created_admin' command with the result.
+
+        """
+        crux = self.services["crux"]
+        if self.game_writer:
+            self.logger.debug(f"Sending 'create_admin' to game ID {self.game_id}...")
+            await crux.send_cmd(self.game_writer, "create_admin",
+                    dict(username=username, password=password, email=email))
+
+        success, args = await crux.wait_for_cmd(self.game_reader,
+                "created_admin", timeout=60)
+        writer = self.hosts.get(reader, None)
+        if writer:
+            await crux.send_cmd(writer, "created_admin", dict(success=success))
+
+    async def handle_created_admin(self, reader, success: bool):
+        """
+        When the portal receives 'created_admin', do nothing.
+
+        This response is expected from the 'create_admin' handler.
+        Intercepting this response while 'create_admin' hasn't been
+        sent isn't of much use.
+
+        """
+        pass

@@ -1,2 +1,2 @@
 CATEGORY = "Admin commands"
-#PERMISSIONS = "admin"
+PERMISSIONS = "admin"

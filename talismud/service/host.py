@@ -108,9 +108,9 @@ class Service(CmdMixin, BaseService):
             self.connecting_task.cancel()
         if self.reading_task:
             self.reading_task.cancel()
+
         # Close the connection with the host
         if self.writer:
-            self.logger.debug("host: closing the connection.")
             self.writer.close()
             await self.writer.wait_closed()
 

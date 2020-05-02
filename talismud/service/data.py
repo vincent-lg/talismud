@@ -44,6 +44,17 @@ class Service(BaseService):
 
     name = "data"
 
+    @property
+    def has_admin(self):
+        """
+        Return whether there is an admin character in the database.
+
+        An admin character has the "admin" permission (tag with category
+        'permission') set.
+
+        """
+        return bool(db.CharacterTag.get(name="admin", category="permission"))
+
     async def init(self):
         """Asynchronously initialize the service."""
         self.init_task = None
@@ -70,8 +81,9 @@ class Service(BaseService):
     async def init_DB(self):
         """Initialize the database."""
         self.logger.debug("data: preparing to initialize the database.")
-        file_path = str((Path() / "talismud.db").absolute())
-        db.bind(provider='sqlite', filename=file_path, create_db=True)
+        file_path = (Path() / "talismud.db").absolute()
+        db.bind(provider='sqlite', filename=str(file_path),
+                create_db=True)
         set_sql_debug(True)
         db.generate_mapping(create_tables=True)
         self.logger.debug("data: database initialized.")

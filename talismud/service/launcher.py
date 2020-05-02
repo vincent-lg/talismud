@@ -52,7 +52,7 @@ class Service(BaseService):
         often are created there for consistency.
 
         """
-        pass
+        self.has_admin = True
 
     async def setup(self):
         """Set the game up."""
@@ -67,7 +67,7 @@ class Service(BaseService):
         pass
 
     # Command handlers
-    async def handle_registered_game(self, reader, game_id, sessions):
+    async def handle_registered_game(self, reader, game_id, sessions, **kwargs):
         """The game service has been registered by CRUX."""
         pass
 
@@ -79,10 +79,23 @@ class Service(BaseService):
         """The game service has been registered by CRUX."""
         pass
 
+    async def handle_created_admin(self, reader, success: bool):
+        """
+        When the portal receives 'created_admin', do nothing.
+
+        This response is expected from the 'create_admin' handler.
+        Intercepting this response while 'create_admin' hasn't been
+        sent isn't of much use.
+
+        """
+        pass
+
     # User actions
-    async def action_start(self):
+    async def action_start(self) -> bool:
         """
         Start the game.
+
+        Return whether the game was correctly started.
 
         Order of operations:
             1.  Connect to CRUX.  It should not work, since the portal
@@ -125,7 +138,7 @@ class Service(BaseService):
                         "reason, it hasn't. Check the logs in "
                         "logs/portal.log for errors."
                 )
-                return
+                return False
 
             # The portal has started
             self.logger.info("... portal started.")
@@ -142,12 +155,16 @@ class Service(BaseService):
                 timeout=10)
         if success:
             game_id = args.get("game_id", "UNKNOWN")
-            self.logger.info(f"... game started (id={game_id}).")
+            pid = args.get("pid", "UNKNOWN")
+            self.has_admin = has_admin = args.get("has_admin", False)
+            self.logger.info(f"... game started (id={game_id}, pid={pid}, has_admin={has_admin}).")
+            return True
         else:
             self.logger.error(
                     "The game hasn't started. See logs/game.log "
                     "for more information."
             )
+            return False
 
     async def action_stop(self):
         """
@@ -240,3 +257,27 @@ class Service(BaseService):
                     "The game hasn't started. See logs/game.log "
                     "for more information."
             )
+
+    async def action_create_admin(self, username: str,
+            password: str, email: str = ""):
+        """
+        Send a 'create_admin' command to the game, to create a new admin.
+
+        Args:
+            reader (StreamReader): the reader for this command.
+            username (str): the username to create.
+            password (str): the plain text password to use.
+            email (str, optional): the new account's email address.
+
+        Response:
+            The 'created_admin' command with the result.
+
+        """
+        host = self.services["host"]
+        if host.writer:
+            await host.send_cmd(host.writer, "create_admin",
+                    dict(username=username, password=password, email=email))
+
+        success, args = await host.wait_for_cmd(host.reader,
+                "created_admin", timeout=60)
+        return success
