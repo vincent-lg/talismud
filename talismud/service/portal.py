@@ -284,3 +284,36 @@ class Service(BaseService):
 
         """
         pass
+
+    async def handle_shell(self, reader, code: str):
+        """
+        Send a 'shell' command to the game, to execute Python code.
+
+        Args:
+            reader (StreamReader): the reader for this command.
+            code (str): the Python code to execute.
+
+        Response:
+            The 'result' command with the output.
+
+        """
+        crux = self.services["crux"]
+        if self.game_writer:
+            self.logger.debug(f"Sending 'shell' to game ID {self.game_id}...")
+            await crux.send_cmd(self.game_writer, "shell", dict(code=code))
+
+        success, args = await crux.wait_for_cmd(self.game_reader, "result")
+        writer = self.hosts.get(reader, None)
+        if success and writer:
+            await crux.send_cmd(writer, "result", args)
+
+    async def handle_result(self, reader, **kargs):
+        """
+        When the portal receives 'result', do nothing.
+
+        This response is expected from the 'shell' handler.
+        Intercepting this response while 'shell' hasn't been
+        sent isn't of much use.
+
+        """
+        pass

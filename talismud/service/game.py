@@ -33,8 +33,10 @@ import asyncio
 
 from data.base import db
 from data.session import CMDS_TO_PORTAL, OUTPUT
-
+from service.shell import Shell
 from service.base import BaseService
+
+CONSOLE = Shell({"db": db}, "<shell>")
 
 class Service(BaseService):
 
@@ -214,3 +216,22 @@ class Service(BaseService):
         if host.writer:
             await host.send_cmd(host.writer, "created_admin",
                     dict(success=True))
+    async def handle_shell(self, reader, code: str):
+        """
+        Execute arbitrary Python code.
+
+        Args:
+            reader (StreamReader): the reader for this command.
+            code (str): the Python code to execute.
+
+        Response:
+            The 'result' command with the output.
+
+        """
+        host = self.services["host"]
+        more = CONSOLE.push(code)
+        prompt = "... " if more else ">>> "
+
+        if host.writer:
+            await host.send_cmd(host.writer,
+                    "result", dict(display=CONSOLE.output, prompt=prompt))

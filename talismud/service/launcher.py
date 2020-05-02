@@ -66,6 +66,35 @@ class Service(BaseService):
         """Cannot read from CRUX anymore, prepare to shut down."""
         pass
 
+    async def check_if_started(self):
+        """Return whether the portal and game have started."""
+        host = self.services["host"]
+        max_attempts = host.max_attempts
+        timeout = host.timeout
+        host.max_attempts = 2
+        host.timeout = 0.2
+        await host.connect_to_CRUX()
+
+        if not host.connected:
+            host.max_attempts = max_attempts
+            host.timeout = timeout
+            return False
+
+        # Otherwise, check that the game is also running
+        await host.send_cmd(host.writer, "what_game_id")
+
+        # Wait for the reply
+        success, args = await host.wait_for_cmd(host.reader, "game_id",
+                timeout=5)
+        if not success:
+            host.max_attempts = max_attempts
+            host.timeout = timeout
+            return False
+
+        host.max_attempts = max_attempts
+        host.timeout = timeout
+        return bool(args.get("game_id"))
+
     # Command handlers
     async def handle_registered_game(self, reader, game_id, sessions, **kwargs):
         """The game service has been registered by CRUX."""
@@ -88,6 +117,10 @@ class Service(BaseService):
         sent isn't of much use.
 
         """
+        pass
+
+    async def handle_result(self, reader, **kwargs):
+        """When the launcher receives 'result', do nothing."""
         pass
 
     # User actions
@@ -281,3 +314,37 @@ class Service(BaseService):
         success, args = await host.wait_for_cmd(host.reader,
                 "created_admin", timeout=60)
         return success
+
+    async def action_shell(self):
+        """
+        Open a Python-like shell and send command to the portal.
+
+        These commands are then sent to the game where they
+        are interpreted.
+
+        """
+        host = self.services["host"]
+        is_started = await self.check_if_started()
+        if not is_started:
+            await self.action_start()
+
+        # In a loop, ask user input and send the Python command
+        # to the portal, which will forward it to the game, which
+        # will evaluate and answer in the same way.
+        prompt = ">>> "
+        while True:
+            try:
+                code = input(prompt)
+            except KeyboardInterrupt:
+                break
+
+            await host.send_cmd(host.writer, "shell", dict(code=code))
+            success, args = await host.wait_for_cmd(host.reader, "result")
+            if success:
+                prompt = args.get("prompt", "??? ")
+                display = args.get("display", "")
+                print(display)
+
+        # If the game wasn't started before executing code, stop it.
+        if not is_started:
+            await self.action_stop()
