@@ -212,20 +212,25 @@ class Service(BaseService):
         """
         # 1. Connect to CRUX.  Success is expected.
         host = self.services["host"]
-        host.max_attempts = 10
-        host.timeout = 2
-        await host.connect_to_CRUX()
-
         if not host.connected:
-            self.logger.warning("The portal seems to be off, the game isn't running.")
-            return
+            host.max_attempts = 10
+            host.timeout = 2
+            await host.connect_to_CRUX()
+
+            if not host.connected:
+                self.logger.warning("The portal seems to be off, the game isn't running.")
+                return
 
         # 3. Send the 'stop_portal' command
         self.logger.info("Portal and game stopping ...")
         await host.send_cmd(host.writer, "stop_portal")
 
         # 4. Wait for any command to be received.  None should.
-        await host.wait_for_cmd(host.reader, "*", timeout=10)
+        while (args := await host.wait_for_cmd(host.reader, "*", timeout=0.1)):
+            success, args = args
+            if not success:
+                break
+
         if host.connected:
             self.logger.error("The portal is still running, although asked to shudown.")
         else:
@@ -336,6 +341,7 @@ class Service(BaseService):
             try:
                 code = input(prompt)
             except KeyboardInterrupt:
+                print()
                 break
 
             await host.send_cmd(host.writer, "shell", dict(code=code))
@@ -343,7 +349,7 @@ class Service(BaseService):
             if success:
                 prompt = args.get("prompt", "??? ")
                 display = args.get("display", "")
-                print(display)
+                print(display.rstrip("\n"))
 
         # If the game wasn't started before executing code, stop it.
         if not is_started:
