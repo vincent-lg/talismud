@@ -32,8 +32,30 @@
 import asyncio
 
 from async_timeout import timeout as async_timeout
-
+from enum import Enum, Flag, auto
 from service.base import BaseService
+
+class MUDOp(Flag):
+
+    """Cumulative MUD operations."""
+
+    OFFLINE = 0
+    PORTAL_ONLINE = auto()
+    GAME_ONLINE = auto()
+    STOPPING = auto()
+    STARTING = auto()
+    RELOADING = auto()
+    NEED_ADMIN = auto()
+
+
+class MUDStatus(Enum):
+
+    """Mud status."""
+
+    OFFLINE = 0
+    PORTAL_ONLINE = 1
+    ALL_ONLINE = 2
+
 
 class Service(BaseService):
 
@@ -53,6 +75,8 @@ class Service(BaseService):
 
         """
         self.has_admin = True
+        self.operations = MUDOp.OFFLINE
+        self.status = MUDStatus.OFFLINE
 
     async def setup(self):
         """Set the game up."""
@@ -66,8 +90,8 @@ class Service(BaseService):
         """Cannot read from CRUX anymore, prepare to shut down."""
         pass
 
-    async def check_if_started(self):
-        """Return whether the portal and game have started."""
+    async def check_status(self):
+        """Check the MUD status."""
         host = self.services["host"]
         max_attempts = host.max_attempts
         timeout = host.timeout
@@ -76,11 +100,15 @@ class Service(BaseService):
         await host.connect_to_CRUX()
 
         if not host.connected:
+            self.operations = MUDOp.OFFLINE
+            self.status = MUDStatus.OFFLINE
             host.max_attempts = max_attempts
             host.timeout = timeout
-            return False
+            return
 
         # Otherwise, check that the game is also running
+        self.operations = MUDOp.PORTAL_ONLINE
+        self.status = MUDStatus.PORTAL_ONLINE
         await host.send_cmd(host.writer, "what_game_id")
 
         # Wait for the reply
@@ -93,7 +121,9 @@ class Service(BaseService):
 
         host.max_attempts = max_attempts
         host.timeout = timeout
-        return bool(args.get("game_id"))
+        if args.get("game_id"):
+            self.operations = MUDOp.PORTAL_ONLINE | MUDOp.GAME_ONLINE
+            self.status = MUDStatus.ALL_ONLINE
 
     # Command handlers
     async def handle_registered_game(self, reader, game_id, sessions, **kwargs):
@@ -157,8 +187,11 @@ class Service(BaseService):
 
         if not host.connected:
             # 2. 'host' is not connected.  Start the portal.
+            self.operations = MUDOp.OFFLINE
+            self.status = MUDStatus.OFFLINE
             self.logger.info("Starting the portal ...")
             self.process.start_process("portal")
+            self.operations = MUDOp.STARTING
 
             # 3. Try to connect to CRUX again.  This time if it fails, it's an error.
             host.max_attempts = 20
@@ -166,6 +199,8 @@ class Service(BaseService):
             await host.connect_to_CRUX()
 
             if not host.connected:
+                self.operations = MUDOp.OFFLINE
+                self.status = MUDStatus.OFFLINE
                 self.logger.error(
                         "The portal should have been started. For some "
                         "reason, it hasn't. Check the logs in "
@@ -174,8 +209,12 @@ class Service(BaseService):
                 return False
 
             # The portal has started
+            self.operations = MUDOp.STARTING | MUDOp.PORTAL_ONLINE
+            self.status = MUDStatus.PORTAL_ONLINE
             self.logger.info("... portal started.")
         else:
+            self.operations = MUDOp.STARTING | MUDOp.PORTAL_ONLINE
+            self.status = MUDStatus.PORTAL_ONLINE
             self.logger.info("The portal is already running.")
 
         # 4. Start the game process
@@ -187,12 +226,18 @@ class Service(BaseService):
         success, args = await host.wait_for_cmd(host.reader, "registered_game",
                 timeout=10)
         if success:
+            self.operations = MUDOp.PORTAL_ONLINE | MUDOp.GAME_ONLINE
+            self.status = MUDStatus.ALL_ONLINE
             game_id = args.get("game_id", "UNKNOWN")
             pid = args.get("pid", "UNKNOWN")
             self.has_admin = has_admin = args.get("has_admin", False)
+            if not has_admin:
+                self.operations |= MUDOp.NEED_ADMIN
             self.logger.info(f"... game started (id={game_id}, pid={pid}, has_admin={has_admin}).")
             return True
         else:
+            self.operations = MUDOp.PORTAL_ONLINE
+            self.status = MUDStatus.PORTAL_ONLINE
             self.logger.error(
                     "The game hasn't started. See logs/game.log "
                     "for more information."
@@ -218,10 +263,16 @@ class Service(BaseService):
             await host.connect_to_CRUX()
 
             if not host.connected:
+                self.operations = MUDOp.OFFLINE
+                self.status = MUDStatus.OFFLINE
                 self.logger.warning("The portal seems to be off, the game isn't running.")
                 return
 
         # 3. Send the 'stop_portal' command
+        self.operations = (
+            MUDOp.STOPPING | MUDOp.PORTAL_ONLINE | MUDOp.GAME_ONLINE
+        )
+        self.status = MUDStatus.ALL_ONLINE
         self.logger.info("Portal and game stopping ...")
         await host.send_cmd(host.writer, "stop_portal")
 
@@ -232,8 +283,12 @@ class Service(BaseService):
                 break
 
         if host.connected:
+            self.operations = MUDOp.PORTAL_ONLINE | MUDOp.GAME_ONLINE
+            self.status = MUDStatus.ALL_ONLINE
             self.logger.error("The portal is still running, although asked to shudown.")
         else:
+            self.operations = MUDOp.OFFLINE
+            self.status = MUDStatus.OFFLINE
             self.logger.info("... portal and game stopped.")
 
     async def action_restart(self):
@@ -265,11 +320,16 @@ class Service(BaseService):
         await host.connect_to_CRUX()
 
         if not host.connected:
+            self.operations = MUDOp.OFFLINE
+            self.status = MUDStatus.OFFLINE
             self.logger.warning("The portal seems to be off, the game isn't running.")
             return
 
         # 2. Send the 'restart_game' command
-        self.logger.info("Hame stopping ...")
+        self.logger.info("Game stopping ...")
+        self.operations = (MUDOp.RELOADING |
+                MUDOp.PORTAL_ONLINE | MUDOp.GAME_ONLINE)
+        self.status = MUDStatus.ALL_ONLINE
         await host.send_cmd(host.writer, "restart_game", dict(announce=True))
 
         # 3. The portal should stop the game process...
@@ -278,9 +338,13 @@ class Service(BaseService):
         success, args = await host.wait_for_cmd(host.reader, "game_stopped",
                 timeout=10)
         if not success:
+            self.operations = MUDOp.PORTAL_ONLINE | MUDOp.GAME_ONLINE
+            self.status = MUDStatus.ALL_ONLINE
             self.logger.warning("The game is still running.")
             return
 
+        self.operations = MUDOp.RELOADING | MUDOp.PORTAL_ONLINE
+        self.status = MUDStatus.PORTAL_ONLINE
         self.logger.info("... game stopped.")
         self.logger.info("Start game ...")
         # 5. The game process will send a 'register_game' command to CRUX.
@@ -288,9 +352,13 @@ class Service(BaseService):
         success, args = await host.wait_for_cmd(host.reader, "registered_game",
                 timeout=10)
         if success:
+            self.operations = MUDOp.PORTAL_ONLINE | MUDOp.GAME_ONLINE
+            self.status = MUDStatus.ALL_ONLINE
             game_id = args.get("game_id", "UNKNOWN")
             self.logger.info(f"... game started (id={game_id}).")
         else:
+            self.operations = MUDOp.PORTAL_ONLINE
+            self.status = MUDStatus.PORTAL_ONLINE
             self.logger.error(
                     "The game hasn't started. See logs/game.log "
                     "for more information."
@@ -329,8 +397,9 @@ class Service(BaseService):
 
         """
         host = self.services["host"]
-        is_started = await self.check_if_started()
-        if not is_started:
+        await self.check_status()
+        init_started = self.status == MUDStatus.ALL_ONLINE
+        if not init_started:
             await self.action_start()
 
         # In a loop, ask user input and send the Python command
@@ -352,5 +421,5 @@ class Service(BaseService):
                 print(display.rstrip("\n"))
 
         # If the game wasn't started before executing code, stop it.
-        if not is_started:
+        if not init_started:
             await self.action_stop()
