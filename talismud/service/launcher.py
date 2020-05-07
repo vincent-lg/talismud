@@ -92,6 +92,11 @@ class Service(BaseService):
 
     async def check_status(self):
         """Check the MUD status."""
+        if MUDOp.NEED_ADMIN in self.operations:
+            need_admin = True
+        else:
+            need_admin = False
+
         host = self.services["host"]
         max_attempts = host.max_attempts
         timeout = host.timeout
@@ -123,6 +128,9 @@ class Service(BaseService):
         host.timeout = timeout
         if args.get("game_id"):
             self.operations = MUDOp.PORTAL_ONLINE | MUDOp.GAME_ONLINE
+            if need_admin:
+                self.operations |= MUDOp.NEED_ADMIN
+
             self.status = MUDStatus.ALL_ONLINE
 
     # Command handlers

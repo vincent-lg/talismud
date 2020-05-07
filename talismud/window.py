@@ -32,6 +32,45 @@ class TalismudWindow(Window):
         await self.service.action_start()
         await self.check_status()
 
+        # If an admin is needed
+        if MUDOp.NEED_ADMIN in self.service.operations:
+            dialog = self.pop_dialog("""
+                <dialog title="New admin account">
+                  <text x=1 y=2 id=username>Enter your new username:</text>
+                  <text x=1 y=3 id=password hidden>Enter your account password:</text>
+                  <text x=1 y=4 id=email>Enter your optional account email address:</text>
+                  <button x=5 y=2 set_true>OK</button>
+                  <button x=5 y=4 set_false>Cancel</button>
+                </dialog>
+            """)
+
+            if dialog:
+                username = dialog["username"].value
+                password = dialog["password"].value
+                email = dialog["email"].value
+                success = await self.service.action_create_admin(username,
+                        password, email)
+
+                if success:
+                    self.pop_dialog("""
+                        <dialog title="Success">
+                          <text x=1 y=2 id=message read-only>
+                            Your new administrator account was successfully
+                            created.
+                          </text>
+                          <button x=5 y=2 set_true>OK</button>
+                        </dialog>
+                    """)
+                else:
+                    self.pop_dialog("""
+                        <dialog title="Error">
+                          <text x=1 y=2 id=message read-only>
+                            The administrator account couldn't be created.
+                          </text>
+                          <button x=5 y=2 set_true>OK</button>
+                        </dialog>
+                    """)
+
     async def on_restart(self):
         """When clicking on the restart button."""
         self["start"].disable()
