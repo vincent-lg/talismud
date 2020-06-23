@@ -197,6 +197,9 @@ class Process(metaclass=ABCMeta):
             command = process_name
             command += ".exe" if platform.system() == 'Windows' else ""
 
+        if platform.system() != 'Windows':
+            command = command.split(" ")
+
         self.logger.debug(
             f"Starting the {process_name!r} process: {command!r}"
         )
