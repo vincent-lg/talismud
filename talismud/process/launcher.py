@@ -34,7 +34,11 @@ import asyncio
 from getpass import getpass
 
 from process.base import Process
-from window import TalismudWindow
+
+try:
+    from window import TalismudWindow
+except ModuleNotFoundError:
+    TalismudWindow = None
 
 parser = argparse.ArgumentParser()
 parser.set_defaults(action="help")
@@ -96,6 +100,8 @@ class Launcher(Process):
             await launcher.action_restart()
         elif args.action == "shell":
             await launcher.action_shell()
+        elif TalismudWindow is None:
+            parser.print_help()
         else:
             self.window = TalismudWindow.parse_layout(TalismudWindow)
             self.window.process = self
