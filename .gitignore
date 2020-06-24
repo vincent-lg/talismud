@@ -15,3 +15,6 @@ htmlcov
 
 # Database
 *.db
+
+# Private settings
+src/settings/private.py
