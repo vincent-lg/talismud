@@ -30,6 +30,7 @@
 """Launcher service."""
 
 import asyncio
+import sys
 
 from async_timeout import timeout as async_timeout
 from enum import Enum, Flag, auto
@@ -160,6 +161,11 @@ class Service(BaseService):
     async def handle_result(self, reader, **kwargs):
         """When the launcher receives 'result', do nothing."""
         pass
+
+    async def handle_cannot_start_game(self, reader, error):
+        """Cannot start the game."""
+        self.logger.error(error)
+        sys.exit(1)
 
     # User actions
     async def action_start(self) -> bool:

@@ -64,16 +64,27 @@ class Service(BaseService):
         """
         self.game_id = None
         self.game_pid = None
+        self.game_process = None
         self.game_reader = None
         self.game_writer = None
+        self.return_code_task = None
 
     async def setup(self):
         """Set the portal up."""
         pass
 
+    async def start_watch_return_code(self):
+        """Start the task to watch the return code."""
+        self.return_code_task = asyncio.create_task(self.watch_return_code())
+
     async def cleanup(self):
         """Clean the service up before shutting down."""
-        pass
+        await self.cleanup_watch_return_code()
+
+    async def cleanup_watch_return_code(self):
+        """Stop watching the process' return code."""
+        if self.return_code_task:
+            self.return_code_task.cancel()
 
     async def error_read(self, writer):
         """Can't read from the connection."""
@@ -93,6 +104,29 @@ class Service(BaseService):
             if reader is self.game_reader:
                 await self.error_read(self.game_writer)
 
+    async def watch_return_code(self):
+        """Asynchronously watch for the game process' return code."""
+        try:
+            while True:
+                await asyncio.sleep(0.2)
+                if self.game_process:
+                    return_code = self.game_process.poll()
+                    if return_code is None:
+                        continue
+                    elif return_code != 0:
+                        error = self.game_process.communicate()[1]
+                        error = error.decode("utf-8", errors="replace")
+                        error = error.replace("\r\n", "\n")
+                        error = error.replace("\r", "\n").rstrip()
+                        crux = self.services["crux"]
+                        for writer in crux.readers.values():
+                            await crux.send_cmd(writer, "cannot_start_game",
+                                    dict(error=error))
+                        break
+                    #else:
+                    #    break()
+        except asyncio.CancelledError:
+            pass
     async def handle_register_game(self, reader, pid, has_admin=False):
         """
         A new game process wants to be registered.
@@ -123,6 +157,7 @@ class Service(BaseService):
         self.game_pid = pid
         self.game_reader = reader
         self.game_writer = writer
+        await self.cleanup_watch_return_code()
         sessions = list(self.services["telnet"].sessions.keys())
         for writer in tuple(self.hosts.values()):
             await self.services["crux"].send_cmd(writer, "registered_game",
@@ -148,20 +183,16 @@ class Service(BaseService):
                 "stopped yet.  Wait..."
             )
 
-            loop = 30
-            while self.process.is_running(self.game_pid):
-                loop -= 1
-                if loop <= 0:
-                    self.logger.error(
-                        "The game process is still running, do "
-                        "not start a new one."
-                    )
-                    return
-                await asyncio.sleep(0.1)
-
+            # Note: this will block instead of running asynchronously.
+            # Not ideal, but it's hard to tell how much time this will
+            # take, as the game might have a lot of data to save on shutdown.
+            self.game_process.wait()
             self.game_pid = None
+            self.game_process = None
 
-        self.process.start_process("game")
+        await self.cleanup_watch_return_code()
+        self.game_process = self.process.start_process("game")
+        await self.start_watch_return_code()
 
     async def handle_stop_game(self, reader):
         """Handle the stop_game command."""
@@ -171,6 +202,9 @@ class Service(BaseService):
             await crux.send_cmd(self.game_writer, "stop_game", dict(game_id=self.game_id))
         else:
             self.logger.warning("Can't stop the game, it's already down it seems.")
+            crux = self.services["crux"]
+            for writer in crux.readers.values():
+                await crux.send_cmd(writer, "game_stopped")
             return
 
         begin = time.time()

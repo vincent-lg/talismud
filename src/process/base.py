@@ -34,7 +34,7 @@ import asyncio
 from importlib import import_module
 import os
 import platform
-from subprocess import Popen
+from subprocess import Popen, PIPE
 import sys
 from typing import Tuple
 
@@ -203,4 +203,5 @@ class Process(metaclass=ABCMeta):
         self.logger.debug(
             f"Starting the {process_name!r} process: {command!r}"
         )
-        process = Popen(command, creationflags=creationflags)
+        return Popen(command, stdout=PIPE, stderr=PIPE,
+                creationflags=creationflags)
