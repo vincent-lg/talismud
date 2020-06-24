@@ -11,7 +11,7 @@ in your source tree.
 
 # 1. Game name and general settings
 # The game name, probably public.
-GAME_NAME = "unknown"
+GAME_NAME = "TalisMUD"
 
 # The game version, can be shown in the Message-Of-The-Day screen if you wish.
 GAME_VERSION = "0.0.1"

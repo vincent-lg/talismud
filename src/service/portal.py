@@ -31,6 +31,7 @@
 
 import asyncio
 import base64
+from pathlib import Path
 import time
 from uuid import UUID
 
@@ -71,7 +72,20 @@ class Service(BaseService):
 
     async def setup(self):
         """Set the portal up."""
-        pass
+        # Create the private settings file if it doesn't exist.
+        private = Path() / "settings" / "private.py"
+        if not private.exists():
+            self.logger.debug(
+                "The private settings file does not exist, create it "
+                "from the sample."
+            )
+            sample = Path() / "settings" / "private.sample"
+            with sample.open("r", encoding="utf-8") as sample_file:
+                with private.open("w", encoding="utf-8") as private_file:
+                    private_file.write(sample_file.read())
+                    self.logger.info(
+                            "The private settings file has been created."
+                    )
 
     async def start_watch_return_code(self):
         """Start the task to watch the return code."""

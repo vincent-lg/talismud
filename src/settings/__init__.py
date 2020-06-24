@@ -40,4 +40,7 @@ choice, whether for a game or another project.
 from settings.public import *
 
 # Imports the private settings.  They will override the public settings.
-from settings.private import *
+try:
+    from settings.private import *
+except ModuleNotFoundError:
+    pass
