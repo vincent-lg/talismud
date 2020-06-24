@@ -33,6 +33,7 @@ from aiohttp import web as aioweb
 import asyncio
 
 from service.base import BaseService
+import settings
 
 class Service(BaseService):
 
@@ -67,10 +68,12 @@ class Service(BaseService):
 
     async def serve_web(self):
         """Asynchronously start the web server."""
-        self.logger.info("web: starting the server...")
+        interface = "0.0.0.0" if settings.PUBLIC_ACCESS else "127.0.0.1"
+        port = settings.WEB_PORT
+        self.logger.info(f"web: starting the server on {interface}:{port}...")
         try:
             await self.runner.setup()
-            site = aioweb.TCPSite(self.runner, 'localhost', 8080)
+            site = aioweb.TCPSite(self.runner, interface, port)
             await site.start()
         except asyncio.CancelledError:
             pass

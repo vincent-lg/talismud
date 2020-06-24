@@ -56,7 +56,13 @@ HASH_ITERATIONS = 100_000
 # let PBKDF2 decide.
 KEY_SIZE = None
 
-# 3. Network ports
+# 3. Network interfaces and ports
+
+# Allow external connections (from the Internet). Note that even if this
+# setting is set to True, accessing your game from the Internet will
+# be affected by a lot of factors.
+# If False, only connections from the local host will be accepted.
+PUBLIC_ACCESS = True
 
 # Ports players have to connect to if they use a Telnet-like MUD client.
 TELNET_PORT = 4000

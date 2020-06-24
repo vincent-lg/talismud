@@ -72,15 +72,18 @@ class Service(CmdMixin, BaseService):
 
     async def create_server(self):
         """Create the CRUX server."""
-        port = 4000
-        self.logger.debug(f"telnet: preparing to listen on localhost, port {port}")
+        interface = "0.0.0.0" if settings.PUBLIC_ACCESS else "127.0.0.1"
+        port = settings.TELNET_PORT
+        self.logger.debug(
+            f"telnet: preparing to listen on {interface}, port {port}"
+        )
         try:
             server = await asyncio.start_server(self.new_connection,
-                    '127.0.0.1', port)
+                    interface, port)
         except asyncio.CancelledError:
             pass
         except ConnectionError:
-            self.logger.error("telnet: can't connect to localhost:{port}")
+            self.logger.error("telnet: can't connect to {interface}:{port}")
             return
 
         addr = server.sockets[0].getsockname()
