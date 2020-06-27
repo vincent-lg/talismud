@@ -190,7 +190,7 @@ class Service(BaseService):
 
     async def handle_start_game(self, reader):
         """Handle the start_game command."""
-        if self.game_pid:
+        if self.game_pid and self.game_process:
             # The game is already running
             self.logger.debug(
                 f"The game process (PID={self.game_pid}) hasn't "
@@ -200,7 +200,7 @@ class Service(BaseService):
             # Note: this will block instead of running asynchronously.
             # Not ideal, but it's hard to tell how much time this will
             # take, as the game might have a lot of data to save on shutdown.
-            self.game_process.wait()
+            self.game_process.communicate()
             self.game_pid = None
             self.game_process = None
 
@@ -275,12 +275,8 @@ class Service(BaseService):
 
     async def handle_output(self, reader, session_id, output):
         """Send the output to the client."""
-        _, writer = self.services["telnet"].sessions.get(session_id, (None, None))
-        if writer is None:
-            self.logger.warning(f"telnet: should send to session {session_id}, but can't find an appropriate writer.")
-        else:
-            writer.write(output)
-            await writer.drain()
+        telnet = self.services["telnet"]
+        await telnet.write_to(session_id, output)
 
     async def handle_disconnect_session(self, reader, session_id: UUID):
         """
