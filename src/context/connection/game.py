@@ -73,4 +73,5 @@ class Game(BaseContext):
 
         # Otherwise, parse the command
         args = command.parse()
-        await command.run(args)
+        args = command.args_to_dict(args)
+        await command.run(**args)

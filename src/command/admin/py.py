@@ -12,9 +12,9 @@ class Py(Command):
     """
 
     args = CommandArgs()
-    args.add_argument("text", "code")
+    args.add_argument("text", dest="code")
 
-    async def run(self, args):
+    async def run(self, code):
         """Run the command."""
         # Create the global variables
         vars = {
@@ -23,17 +23,16 @@ class Py(Command):
 
         # First try to evaluate it
         try:
-            result = eval(args.code, vars)
+            result = eval(code, vars)
         except SyntaxError:
             # Now try running in exec mode
             try:
-                exec(args.code, vars)
+                exec(code, vars)
             except Exception:
                 await self.msg(traceback.format_exc())
-            else:
-                await self.msg("Done.")
         except Exception:
             await self.msg(traceback.format_exc())
         else:
             await self.msg(str(result))
 
+        await self.msg(">>>")

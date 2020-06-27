@@ -117,9 +117,9 @@ class Process(metaclass=ABCMeta):
             await service.stop()
             del self.services[name]
 
-        self.logger.debug("... process stopped.")
         self.started = False
         await self.cleanup()
+        self.logger.debug("... process stopped.")
 
     @abstractmethod
     async def setup(self):

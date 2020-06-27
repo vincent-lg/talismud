@@ -30,12 +30,13 @@
 """Base class for commands."""
 
 from importlib import import_module
+import inspect
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 from logbook import FileHandler, Logger
 
-from command.args import CommandArgs
+from command.args import CommandArgs, Namespace
 
 NOT_SET = object()
 
@@ -192,8 +193,12 @@ class Command:
         Args:
             args (namespace): The correctly parsed arguments.
 
+        The method signature is actually quite variable.  You can specify
+        the keyword arguments for your command which helps to parse them.
+        See 'admin/py.py' for instance.
+
         """
-        await self.msg(f"Great!  You reached the dcommand {self.name}.")
+        await self.msg(f"Great!  You reached the command {self.name}.")
 
     async def msg(self, text: str):
         """
@@ -251,3 +256,44 @@ class Command:
             rindex += 1
 
         return default
+
+    @classmethod
+    def args_to_dict(cls, args: Namespace) -> Dict[str, Any]:
+        """
+        Return a dictionary based on the `run` arguments.
+
+        The `run` method can have:
+            An argument called `args` which contains the entire namespace.
+            An argument for each namespace arguments.
+
+        This class method will create a dictionary based on the
+        expected arguments of the `run` method.
+
+        Returns:
+            args_as_dict (dict): the packed namespace as a dict.
+
+        """
+        to_dict = {}
+        signature = inspect.signature(cls.run)
+        parameters = [p for p in signature.parameters.values() if
+                p.name != "self"]
+
+        for parameter in parameters:
+            if parameter.name == "args":
+                to_dict["args"] = args
+            else:
+                value = getattr(args, parameter.name, NOT_SET)
+                if value is NOT_SET:
+                    default = parameter.default
+                    if default is inspect._empty:
+                        raise ValueError(
+                                f"{cls}: the command requires the keyword "
+                                f"argument {parameter.name!r}, but it's not "
+                                "defined as a command argument and doesn't "
+                                "have a default value in the method signature"
+                        )
+
+                    value = default
+                to_dict[parameter.name] = value
+
+        return to_dict

@@ -31,4 +31,5 @@
 
 from command.args.args import CommandArgs
 from command.args.keyword import Keyword
+from command.args.namespace import Namespace
 from command.args.text import Text

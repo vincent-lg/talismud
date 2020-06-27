@@ -115,7 +115,8 @@ class CommandArgs:
         """
         Try to parse the command arguments.
 
-        This method returns either a parsed namespace containing the parsed arguments, or an error representing by `ArgumentError`.
+        This method returns either a parsed namespace containing the
+        parsed arguments, or an error represented by `ArgumentError`.
 
         Args:
             arguments (str): the unparsed arguments as a string.
