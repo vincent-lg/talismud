@@ -45,7 +45,7 @@ SALT_SIZE = 32
 
 # Number of iterations
 # To store your password, the algorithm will build a stronger hash
-# if you specify a greater number of iteration.  The greater the number,
+# if you specify a greater number of iterations.  The greater the number,
 # the slower it will perform however.  It is recommended to use at least
 # 100,000 iterations for a SHA-256 password, so that's the default setting.
 HASH_ITERATIONS = 100_000
@@ -56,6 +56,19 @@ HASH_ITERATIONS = 100_000
 # let PBKDF2 decide.
 KEY_SIZE = None
 
+# The following settings can be changed afterward.
+# Two-letter country code to use for the SSL certificates (US, FR, ES...).
+COUNTRY = "FR"
+
+# State/province name for the SSL certificates.
+STATE = "None"
+
+# Locality name for the SSL certificates.
+LOCALITY = "Paris"
+
+# Organization name for the SSL certificates.
+ORGANIZATION = "TalisMUD"
+
 # 3. Network interfaces and ports
 
 # Allow external connections (from the Internet). Note that even if this
@@ -64,13 +77,21 @@ KEY_SIZE = None
 # If False, only connections from the local host will be accepted.
 PUBLIC_ACCESS = True
 
-# Ports players have to connect to if they use a Telnet-like MUD client.
+# The port users have to connect to if they use a Telnet-like MUD client.
 TELNET_PORT = 4000
 
-# Ports users have to connect to in order to access your game website.
+# The port users have to connect to in order to access your game website.
 # Note: changing this setting to 80 or 443 is a bad idea.  Use proxies
 # instead.  See the deployment guide.
 WEB_PORT = 4001
+
+# The port users have to connect to in order to access the telnet-SSL game.
+# A connection to telnet-SSL is identical to telnet, except the connection
+# is secured (passwords, in particular, do not travel in plain text on the
+# network).  You can set this to None if you don't wish to have a
+# telnet-SSL port, but you probably don't have a good reason for doing
+# so.  Not all MUD clients support SSL, unfortunately.
+TELNET_SSL_PORT = 4003
 
 # 4. Login options
 # Minimum length of username (in characters)

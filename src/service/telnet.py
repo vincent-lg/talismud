@@ -73,7 +73,9 @@ class Service(CmdMixin, BaseService):
         self.logger.debug(
             f"{' ' * 12} telnet-ssl: creating the SSL certificate..."
         )
-        save_cert(".ssl/telnet", "localhost")
+        save_cert(".ssl/telnet", "localhost", country=settings.COUNTRY,
+                    state=settings.STATE, locality=settings.LOCALITY,
+                    organization=settings.ORGANIZATION)
         self.logger.debug(f"{' ' * 12} ... certificate created.")
 
     async def cleanup(self):
@@ -95,7 +97,7 @@ class Service(CmdMixin, BaseService):
     async def create_server(self, ssl=False):
         """Create the CRUX server."""
         interface = "0.0.0.0" if settings.PUBLIC_ACCESS else "127.0.0.1"
-        port = 4003 if ssl else settings.TELNET_PORT
+        port = settings.TELNET_SSL_PORT if ssl else settings.TELNET_PORT
         self.logger.debug(
             f"telnet{' SSL' if ssl else ''}: preparing to listen on "
             f"{interface}, port {port}"

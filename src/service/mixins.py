@@ -47,6 +47,7 @@ import time
 from async_timeout import timeout as async_timeout
 
 from service.ssl_cert import save_cert
+import settings
 
 class CmdMixin:
 
@@ -80,7 +81,9 @@ class CmdMixin:
         """Build SSL certificate if necessary."""
         if not (Path() / ".ssl").exists():
             self.logger.debug(' ' * 12 + "CRUX-ssl: creating the SSL certificate...")
-            save_cert(".ssl/crux", "localhost")
+            save_cert(".ssl/crux", "localhost", country=settings.COUNTRY,
+                    state=settings.STATE, locality=settings.LOCALITY,
+                    organization=settings.ORGANIZATION)
             self.logger.debug(' ' * 12 + "... certificate created.")
 
     async def read_commands(self, reader):
