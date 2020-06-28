@@ -30,6 +30,7 @@
 """Asynchronous messaging service."""
 
 import asyncio
+import ssl
 
 from service.base import BaseService
 from service.mixins import CmdMixin
@@ -67,20 +68,32 @@ class Service(CmdMixin, BaseService):
         """Set the CRUX server up."""
         self.schedule_hook("error_read", self.error_read)
         self.schedule_hook("error_write", self.error_write)
-        self.serving_task = asyncio.create_task(self.create_server())
+        self.serving_task = asyncio.create_task(self.start_serving())
+        await self.build_SSL()
 
     async def cleanup(self):
         """Clean the service up before shutting down."""
         if self.serving_task:
             self.serving_task.cancel()
 
+    async def start_serving(self):
+        """Prepare to serve."""
+        try:
+            await self.create_server()
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            self.logger.exception("CRUX: an error occurred while serving")
+
     async def create_server(self):
         """Create the CRUX server."""
         port = 4005
+        ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_ctx.load_cert_chain('.ssl/crux.cert', '.ssl/crux.key')
         self.logger.debug(f"CRUX: preparing to listen on localhost, port {port}")
         try:
             server = await asyncio.start_server(self.handle_connection,
-                    '127.0.0.1', port)
+                    'localhost', port, ssl=ssl_ctx)
         except asyncio.CancelledError:
             pass
 

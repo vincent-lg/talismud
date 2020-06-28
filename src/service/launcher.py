@@ -103,6 +103,7 @@ class Service(BaseService):
         timeout = host.timeout
         host.max_attempts = 2
         host.timeout = 0.2
+        await host.build_SSL()
         await host.connect_to_CRUX()
 
         if not host.connected:
@@ -197,6 +198,7 @@ class Service(BaseService):
         host = self.services["host"]
         host.max_attempts = 2
         host.timeout = 0.2
+        await host.build_SSL()
         await host.connect_to_CRUX()
 
         if not host.connected:
@@ -210,6 +212,7 @@ class Service(BaseService):
             # 3. Try to connect to CRUX again.  This time if it fails, it's an error.
             host.max_attempts = 20
             host.timeout = 1
+            await host.build_SSL()
             await host.connect_to_CRUX()
 
             if not host.connected:
@@ -274,6 +277,7 @@ class Service(BaseService):
         if not host.connected:
             host.max_attempts = 10
             host.timeout = 2
+            await host.build_SSL()
             await host.connect_to_CRUX()
 
             if not host.connected:
@@ -331,6 +335,7 @@ class Service(BaseService):
         host = self.services["host"]
         host.max_attempts = 10
         host.timeout = 2
+        await host.build_SSL()
         await host.connect_to_CRUX()
 
         if not host.connected:

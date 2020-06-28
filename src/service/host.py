@@ -30,6 +30,7 @@
 """Asynchronous messaging service for a client."""
 
 import asyncio
+import ssl
 import time
 
 from async_timeout import timeout
@@ -95,6 +96,7 @@ class Service(CmdMixin, BaseService):
 
     async def setup(self):
         """Set the host client up."""
+        await self.build_SSL()
         # If the host service can't read, calls `error_read` asynchronously:
         self.schedule_hook("error_read", self.error_read)
         self.schedule_hook("error_write", self.error_write)
@@ -137,13 +139,15 @@ class Service(CmdMixin, BaseService):
             return
 
         max_attempts = self.max_attempts
+        ssl_ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile='.ssl/crux.cert')
+        self.logger.debug(f"SSL: verify mode: {ssl_ctx.verify_mode}")
         while not self.connected and max_attempts > 0:
             max_attempts -= 1
             self.logger.debug(f"host: attemppting to connect to CRUX, {max_attempts} attempts remaining...")
             before = time.time()
             try:
                 async with timeout(self.timeout):
-                    reader, writer = await asyncio.open_connection('127.0.0.1', 4005)
+                    reader, writer = await asyncio.open_connection('localhost', 4005, ssl=ssl_ctx)
             except (ConnectionRefusedError, asyncio.TimeoutError) as err:
                 self.logger.debug(f"host: can't connect to CRUX, {err!r}")
                 # Asynchronously sleeps.  If `timeout` is set to 1 and

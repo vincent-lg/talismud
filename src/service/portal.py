@@ -108,7 +108,7 @@ class Service(BaseService):
             self.game_writer = None
             self.logger.debug("The connection to the game is lost.")
             crux = self.services["crux"]
-            for writer in crux.readers.values():
+            for writer in list(crux.readers.values()):
                 await crux.send_cmd(writer, "game_stopped")
     error_write = error_read
 
