@@ -31,11 +31,13 @@
 
 import asyncio
 from io import BytesIO
+from ssl import CERT_OPTIONAL, create_default_context, Purpose
 from typing import Union
 from uuid import UUID, uuid4
 
 from service.base import BaseService
 from service.mixins import CmdMixin
+from service.ssl_cert import save_cert
 import settings
 
 class Service(CmdMixin, BaseService):
@@ -54,6 +56,7 @@ class Service(CmdMixin, BaseService):
     async def init(self):
         """Asynchronously initialize the service."""
         self.serving_task = None
+        self.serving_ssl_task = None
         self.sessions = {}
         self.readers = {}
         self.buffers = {}
@@ -63,31 +66,58 @@ class Service(CmdMixin, BaseService):
     async def setup(self):
         """Set the CRUX server up."""
         self.CRUX = self.parent.services["crux"]
-        self.serving_task = asyncio.create_task(self.create_server())
+        self.serving_task = asyncio.create_task(self.start_serving())
+        self.serving_ssl_task = asyncio.create_task(self.start_serving(ssl=True))
+
+        # Create the SSL cert and private key
+        self.logger.debug(
+            f"{' ' * 12} telnet-ssl: creating the SSL certificate..."
+        )
+        save_cert(".ssl/telnet", "localhost")
+        self.logger.debug(f"{' ' * 12} ... certificate created.")
 
     async def cleanup(self):
         """Clean the service up before shutting down."""
         if self.serving_task:
             self.serving_task.cancel()
+        if self.serving_ssl_task:
+            self.serving_ssl_task.cancel()
 
-    async def create_server(self):
+    async def start_serving(self, ssl=False):
+        """Start serving on a TCP port."""
+        try:
+            await self.create_server(ssl=ssl)
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            self.logger.exception("telnet: an error occurred when trying to serve")
+
+    async def create_server(self, ssl=False):
         """Create the CRUX server."""
         interface = "0.0.0.0" if settings.PUBLIC_ACCESS else "127.0.0.1"
-        port = settings.TELNET_PORT
+        port = 4003 if ssl else settings.TELNET_PORT
         self.logger.debug(
-            f"telnet: preparing to listen on {interface}, port {port}"
+            f"telnet{' SSL' if ssl else ''}: preparing to listen on "
+            f"{interface}, port {port}"
         )
+
+        if ssl:
+            ssl_ctx = create_default_context(Purpose.CLIENT_AUTH)
+            ssl_ctx.load_cert_chain('.ssl/telnet.cert', '.ssl/telnet.key')
+        else:
+            ssl_ctx = None
+
         try:
             server = await asyncio.start_server(self.new_connection,
-                    interface, port)
+                    interface, port, ssl=ssl_ctx)
         except asyncio.CancelledError:
             pass
         except ConnectionError:
-            self.logger.error("telnet: can't connect to {interface}:{port}")
+            self.logger.warning("telnet: can't connect to {interface}:{port}")
             return
 
         addr = server.sockets[0].getsockname()
-        self.logger.debug(f"telnet: Serving on {addr}")
+        self.logger.info(f"telnet: Serving on {addr}")
 
         async with server:
             try:

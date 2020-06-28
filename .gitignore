@@ -18,3 +18,5 @@ htmlcov
 
 # Private settings
 src/settings/private.py
+*.cert
+*.key
