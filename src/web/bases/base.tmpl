@@ -1,0 +1,46 @@
+#* Base template from which all templates inherit by default.
+ *
+ * Variables to define:
+ *   $title: the page title.
+ *
+ * Blocks which you may include:
+ *   head: add extra tags in the <head> tag.
+ *   content: change the page main content.
+ *   scripts: add extra <script> lines, at the bottom of the page.
+ *
+ *#
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>TalisMUD - $title</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+    #block head
+    #end block head
+</head>
+<body>
+    <div id="menu"></div>
+    #if $messages
+    <ul class="messages">
+        #for $message in $messages
+        <li}>$message</li>
+        #end for
+    </ul>
+    #end if
+    <div id="content" role="main">
+        #block content
+        #end block content
+    </div>
+    <footer class="footer">
+        <div class="container">
+            <span class="text-muted">Copyright</span>
+        </div>
+    </footer>
+</body>
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+#block scripts
+#end block scripts
+</html>
