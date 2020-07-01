@@ -136,7 +136,8 @@ class Service(BaseService):
 
         # Remove all sessions except these that are explicitly
         # registered by the portal.
-        to_delete = db.Session.select(lambda s: s.uuid not in sessions)
+        to_delete = db.Session.select(
+            lambda s: s.uuid not in sessions and s.context_path != ".web")
         count = to_delete.count()
         self.logger.debug(
                 f"{count} session{'s' if count > 1 else ''} "

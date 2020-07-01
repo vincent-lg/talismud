@@ -29,11 +29,20 @@
 
 """Web service to run on the game process."""
 
-from aiohttp import web as aioweb
 import asyncio
+import base64
+from pathlib import Path
+
+from aiohttp import web as aioweb
+from aiohttp_session import setup, get_session
+from aiohttp_session.cookie_storage import EncryptedCookieStorage
+from cryptography import fernet
 
 from service.base import BaseService
 import settings
+from web.base_template import BaseTemplate
+from web.session import PonyStorage
+from web.uri import URI
 
 class Service(BaseService):
 
@@ -46,40 +55,79 @@ class Service(BaseService):
         """
         Asynchronously initialize the service.
 
-        This method should be overridden in subclasses.  It is called by
-        `start`` before sub-services are created.  It plays the role of
-        an asynchronous constructor for the service, and service attributes
-        often are created there for consistency.
+        Setup the service information to run the web server asynchronously.
 
         """
+        self.base_tamplates = {}
         self.preparing_task = None
         self.app = aioweb.Application()
-        self.app.add_routes([aioweb.get('/', hello)])
         self.runner = aioweb.AppRunner(self.app)
 
     async def setup(self):
-        """Set the portal up."""
-        self.preparing_task = asyncio.create_task(self.serve_web())
+        """
+        Set the web service up.
+
+        Prepare to start the server, load base templates.
+
+        """
+        self.load_base_templates()
+        uris = URI.gather()
+        for uri, resource in uris.items():
+            self.app.add_routes([aioweb.get(uri, resource.process)])
+        self.app.add_routes([aioweb.get("/hello", hello)])
+
+        # TMP code
+        max_age = 3600 * 24 * 365 # 1 year
+        setup(self.app, PonyStorage(max_age=max_age))
+        self.preparing_task = asyncio.create_task(self.prepare_web())
 
     async def cleanup(self):
         """Clean the service up before shutting down."""
         if self.preparing_task:
             self.preparing_task.cancel()
 
+    async def prepare_web(self):
+        """Start to serve asynchronously."""
+        try:
+            await self.serve_web()
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            self.logger.exception("web: an error occurred while serving:")
+
     async def serve_web(self):
         """Asynchronously start the web server."""
         interface = "0.0.0.0" if settings.PUBLIC_ACCESS else "127.0.0.1"
         port = settings.WEB_PORT
         self.logger.info(f"web: starting the server on {interface}:{port}...")
-        try:
-            await self.runner.setup()
-            site = aioweb.TCPSite(self.runner, interface, port)
-            await site.start()
-        except asyncio.CancelledError:
-            pass
-
+        await self.runner.setup()
+        site = aioweb.TCPSite(self.runner, interface, port)
+        await site.start()
         self.preparing_task = None
+
+    def load_base_templates(self):
+        """
+        Synchronously load the base templates.
+
+        Contrary to page templates, base templates are loaded with the server.  Page templates will be loaded when a requests asks for them.
+
+        """
+        path = Path("web/bases")
+
+        # Base templates are in web/pages and have the .tmpl extension
+        for base_path in path.rglob("*.tmpl"):
+            relative = base_path.relative_to(path)
+            identifier = relative.as_posix().replace("/", ".")[:-5]
+            with base_path.open("r", encoding="utf-8") as file:
+                content = file.read()
+            template = BaseTemplate.compile(content, moduleName=identifier,
+                    baseclass=BaseTemplate)
+            print(f"Loading base template {identifier}.")
 
 
 async def hello(request):
-    return aioweb.Response(text="Hello, world")
+    session = await get_session(request)
+    num = session["num"] if "num" in session else 0
+    num += 1
+    session["num"] = num
+    return aioweb.Response(text=f"Hello, <b>for your {num} visit</b>!", content_type="text/html")

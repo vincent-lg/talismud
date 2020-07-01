@@ -32,11 +32,22 @@
 import asyncio
 from pathlib import Path
 
-from pony.orm import commit, db_session, set_sql_debug
+from logbook import FileHandler, Logger
+from pony.orm import commit, core, db_session, set_sql_debug
 
 from data.base import db
 from service.base import BaseService
 import settings
+
+# Logger
+logger = Logger()
+file_handler = FileHandler("logs/database.log",
+        encoding="utf-8", level="DEBUG", delay=True)
+file_handler.format_string = (
+        "{record.time:%Y-%m-%d %H:%M:%S.%f%z} [{record.level_name}] "
+        "{record.message}"
+)
+logger.handlers.append(file_handler)
 
 class Service(BaseService):
 
@@ -117,3 +128,16 @@ class Service(BaseService):
         """Create a new, empty session in the database, return it."""
         session = db.Session(uuid=session_id, context_path="connection.motd")
         return session
+
+
+def log_orm(msg):
+    """Replacement for Pony log_orm which only uses the default logging."""
+    logger.debug(msg)
+core.log_orm = log_orm
+
+def log_sql(sql, arguments=None):
+    """Replacement for the Pony log_sql which uses only the default logger."""
+    if isinstance(arguments, list):
+        sql = 'EXECUTEMANY (%d)\n%s' % (len(arguments), sql)
+    logger.debug("query\n    " + "    ".join(sql.splitlines()))
+core.log_sql = log_sql

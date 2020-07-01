@@ -29,7 +29,7 @@
 
 """Storage mixin.
 
-Contrary to attributes, a storage simply is an internatl dictionary-like
+Contrary to attributes, a storage simply is an internal dictionary-like
 object, stored in the database, as an additional field (db_storage)
 which contains only a binary (pickled dictionary).
 

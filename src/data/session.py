@@ -61,6 +61,12 @@ class Session(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
     restarted, the connection is maintained and the session information
     is retrieved from the database.
 
+    Web sessions, created by the webserver to keep persistent data,
+    are also represented here.  To differentiate them from game sessions,
+    their context_path is set to .web.  Otherwise, web sessions and
+    game sessions are pretty identical: both have a UUID as identifier,
+    both might be connected to an account, both can store data.
+
     """
 
     uuid = PrimaryKey(UUID, default=uuid4)
