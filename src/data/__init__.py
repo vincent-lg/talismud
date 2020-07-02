@@ -35,3 +35,4 @@ from data.character import Character
 from data.delay import Delay
 from data.room import Room
 from data.session import Session
+from web.session import WebSession

@@ -62,10 +62,7 @@ class Session(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
     is retrieved from the database.
 
     Web sessions, created by the webserver to keep persistent data,
-    are also represented here.  To differentiate them from game sessions,
-    their context_path is set to .web.  Otherwise, web sessions and
-    game sessions are pretty identical: both have a UUID as identifier,
-    both might be connected to an account, both can store data.
+    are stored in the WebSession entity (see web.session.WebSession).
 
     """
 

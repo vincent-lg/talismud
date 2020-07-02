@@ -139,5 +139,5 @@ def log_sql(sql, arguments=None):
     """Replacement for the Pony log_sql which uses only the default logger."""
     if isinstance(arguments, list):
         sql = 'EXECUTEMANY (%d)\n%s' % (len(arguments), sql)
-    logger.debug("query\n    " + "    ".join(sql.splitlines()))
+    logger.debug("query\n    " + "\n    ".join(sql.splitlines()))
 core.log_sql = log_sql

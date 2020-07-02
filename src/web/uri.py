@@ -59,6 +59,12 @@ class URI:
 
     async def process(self, request):
         """Process the current URI."""
+        # Execute the program, if any
+        program = self.methods.get(request.method.lower())
+        print(f"{request.method} {self.uri}, {program}")
+        if program:
+            result = await program(request)
+
         self.page.messages = []
         response = str(self.page)
         return web.Response(text=response, content_type="text/html")
@@ -85,22 +91,26 @@ class URI:
         """
         uris = {}
         # First, gather the programs
-        programs_path = Path() / "web/prgram"
-        for program_path in programs_path.rglob(".py"):
+        programs_path = Path() / "web/progs"
+        for program_path in programs_path.rglob("*.py"):
             uri = program_path.relative_to(programs_path).as_posix()[:-3]
             pypath = program_path.as_posix()[:-3].replace("/", ".")
             program = import_module(pypath)
 
             # Create an URI object
-            resource = URI(uri)
+            resource = URI("/" + uri)
             resource.program = program
 
             # Assign methods based on callable names
+            print(f"load {pypath}")
             for key, value in program.__dict__.items():
                 if key.startswith("_"):
                     continue
 
                 if not callable(value):
+                    continue
+
+                if key not in ("get", "post", "put", "delete"):
                     continue
 
                 resource.methods[key] = value

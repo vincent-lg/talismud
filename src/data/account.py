@@ -61,6 +61,7 @@ class Account(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
     created_on = Required(datetime, default=datetime.utcnow)
     updated_on = Required(datetime, default=datetime.utcnow)
     sessions = Set("Session")
+    web_sessions = Set("WebSession")
     characters = Set("Character")
     attributes = Set("AccountAttribute")
 

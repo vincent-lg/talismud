@@ -73,7 +73,15 @@ class Service(BaseService):
         self.load_base_templates()
         uris = URI.gather()
         for uri, resource in uris.items():
-            self.app.add_routes([aioweb.get(uri, resource.process)])
+            methods = resource.methods
+            if "get" not in methods:
+                methods["get"] = None
+
+            for method in methods.keys():
+                print(f"Add {method} for {resource.uri}")
+                self.app.add_routes([
+                        getattr(aioweb, method)(uri, resource.process)
+                ])
         self.app.add_routes([aioweb.get("/hello", hello)])
 
         # TMP code
