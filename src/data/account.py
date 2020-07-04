@@ -45,13 +45,13 @@ import typing as ty
 
 from pony.orm import Optional, Required, Set
 
-from data.attribute import AttributeHandler
 from data.base import db, PicklableEntity
-from data.mixins import HasMixins, HasStorage
+from data.mixins import HasAttributes, HasMixins, HasStorage
 from data.properties import lazy_property
 import settings
 
-class Account(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
+class Account(HasAttributes, HasStorage, PicklableEntity, db.Entity,
+        metaclass=HasMixins):
 
     """Account entity, to connect a session to characters."""
 
@@ -63,11 +63,6 @@ class Account(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
     sessions = Set("Session")
     web_sessions = Set("WebSession")
     characters = Set("Character")
-    attributes = Set("AccountAttribute")
-
-    @lazy_property
-    def db(self):
-        return AttributeHandler(self)
 
     def before_update(self):
         """Change the 'updated_on' datetime."""

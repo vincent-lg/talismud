@@ -31,14 +31,14 @@
 
 from pony.orm import Optional, Required, Set
 
-from data.attribute import AttributeHandler
 from data.base import db, PicklableEntity
-from data.mixins import HasDescription, HasLocation, HasMixins, HasTags
+from data.exit import ExitHandler
+from data.mixins import (HasAttributes, HasDescription,
+        HasLocation, HasMixins, HasTags)
 from data.properties import lazy_property
-import settings
 
-class Room(HasDescription, HasLocation, HasTags, PicklableEntity, db.Entity,
-        metaclass=HasMixins):
+class Room(HasAttributes, HasDescription, HasLocation, HasTags,
+        PicklableEntity, db.Entity, metaclass=HasMixins):
 
     """Room entity."""
 
@@ -47,3 +47,10 @@ class Room(HasDescription, HasLocation, HasTags, PicklableEntity, db.Entity,
     y = Optional(int)
     z = Optional(int)
     barcode = Required(str, max_len=32, unique=True, index=True)
+    exits_from = Set("Exit", reverse="origin")
+    exits_to = Set("Exit", reverse="to")
+
+    @lazy_property
+    def exits(self):
+        """Return the ExitHandler."""
+        return ExitHandler(self)

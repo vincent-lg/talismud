@@ -36,16 +36,16 @@ from uuid import UUID, uuid4
 from pony.orm import Optional, PrimaryKey, Required, Set
 
 from context.base import BaseContext
-from data.attribute import AttributeHandler
 from data.base import db, PicklableEntity
-from data.mixins import HasMixins, HasStorage
+from data.mixins import HasAttributes, HasMixins, HasStorage
 from data.properties import lazy_property
 
 # Asynchronous queue of all session output messages
 OUTPUT = asyncio.Queue()
 CMDS_TO_PORTAL = asyncio.Queue()
 
-class Session(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
+class Session(HasAttributes, HasStorage, PicklableEntity, db.Entity,
+        metaclass=HasMixins):
 
     """
     Session entity.
@@ -69,12 +69,7 @@ class Session(HasStorage, PicklableEntity, db.Entity, metaclass=HasMixins):
     uuid = PrimaryKey(UUID, default=uuid4)
     context_path = Required(str, max_len=64)
     account = Optional("Account")
-    attributes = Set("SessionAttribute")
     character = Optional("Character")
-
-    @lazy_property
-    def db(self):
-        return AttributeHandler(self)
 
     @lazy_property
     def context(self):

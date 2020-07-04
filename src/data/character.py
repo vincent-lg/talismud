@@ -36,17 +36,16 @@ from pony.orm import Optional, Required, Set
 
 from command.layer import StaticCommandLayer
 from command.stack import CommandStack
-from data.attribute import AttributeHandler
 from data.base import db, PicklableEntity
 from data.mixins import (
-        HasCache, HasLocation, HasMixins, HasPermissions,
+        HasAttributes, HasCache, HasLocation, HasMixins, HasPermissions,
         HasStorage, HasTags
 )
 from data.properties import lazy_property
 import settings
 
-class Character(HasCache, HasLocation, HasPermissions, HasStorage, HasTags,
-        PicklableEntity, db.Entity, metaclass=HasMixins):
+class Character(HasAttributes, HasCache, HasLocation, HasPermissions,
+        HasStorage, HasTags, PicklableEntity, db.Entity, metaclass=HasMixins):
 
     """Character entity."""
 

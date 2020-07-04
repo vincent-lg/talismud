@@ -30,9 +30,9 @@
 """Data package, to host database entities and data handlers."""
 
 from data.account import Account
-from data.attribute import Attribute, AccountAttribute, SessionAttribute
 from data.character import Character
 from data.delay import Delay
+from data.exit import Exit
 from data.room import Room
 from data.session import Session
 from web.session import WebSession
