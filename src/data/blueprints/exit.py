@@ -27,73 +27,71 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Blueprint document for rooms."""
+"""Blueprint document for exits."""
 
 from data.base import db
 from data.blueprints.document import Document
-from data.blueprints.exceptions import DelayMe, DelayDocument
+from data.blueprints.exceptions import DelayMe
 
-class RoomDocument(Document):
+class ExitDocument(Document):
 
-    """Room document to add rooms in blueprints."""
+    """Exit document to add exits in blueprints."""
 
     fields = {
-        "barcode": {
+        "name": {
             "type": "str",
             "max_len": 32,
             "presence": "required",
         },
-        "title": {
+        "back": {
             "type": "str",
-            "max_len": 128,
+            "max_len": 32,
+            "presence": "optional",
+        },
+        "origin": {
+            "type": "str",
             "presence": "required",
         },
-        "x": {
-            "type": "int",
-            "presence": "optional",
-        },
-        "y": {
-            "type": "int",
-            "presence": "optional",
-        },
-        "z": {
-            "type": "int",
-            "presence": "optional",
-        },
-        "description": {
+        "destination": {
             "type": "str",
-            "presence": "optional",
+            "presence": "required",
         },
-        "exits": {
-            "type": "subset",
-            "document_type": "exit",
+        "barcode": {
+            "type": "str",
+            "max_len": 32,
+            "presence": "optional",
         },
     }
 
     def apply(self):
-        """Apply the document, create a room."""
-        room = db.Room.get(barcode=self.cleaned.barcode)
-        if room is None:
-            room = db.Room(barcode=self.cleaned.barcode,
-                    title=self.cleaned.title)
-        else:
-            room.title = self.cleaned.title
+        """Apply the document, create an exit."""
+        origin = db.Room.get(barcode=self.cleaned.origin)
+        destination = db.Room.get(barcode=self.cleaned.destination)
+        if origin is None or destination is None:
+            raise DelayMe
 
-        room.x = self.cleaned.x
-        room.y = self.cleaned.y
-        room.z = self.cleaned.z
-
-        description = self.cleaned.description
-        if description:
-            if room.description:
-                room.description.text = description
+        # If the exit already exists
+        exit = db.Exit.between(origin, destination)
+        if exit:
+            # If there's no back name, might create a one-way exit.
+            if not self.cleaned.back:
+                exit.origin = origin
+                exit.to = destination
+                exit.name = self.cleaned.name
+                exit.back = ""
             else:
-                room.description = db.RoomDescription(text=description)
+                if exit.origin is origin:
+                    name = self.cleaned.name
+                    back = self.cleaned.back
+                else:
+                    name = self.cleaned.back
+                    back = self.cleaned.name
+                exit.name = name
+                exit.back = back
+            exit.barcode = self.cleaned.barcode
+        else:
+            exit = db.Exit(name=self.cleaned.name, back=self.cleaned.back,
+                    origin=origin, to=destination,
+                    barcode=self.cleaned.barcode)
 
-        # Add the exits, if possible
-        for exit in list(self.cleaned.exits):
-            try:
-                exit.apply()
-            except DelayMe:
-                self.cleaned.exits.remove(exit)
-                raise DelayDocument(exit)
+        self.applied = False

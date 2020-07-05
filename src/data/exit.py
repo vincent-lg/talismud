@@ -129,6 +129,15 @@ class Exit(HasAttributes, HasTags, PicklableEntity, db.Entity,
                 exit.to is room and exit.back)
         )
 
+    @classmethod
+    def between(cls, origin, destination):
+        """Return the exit between origin and destination, or None."""
+        exits = list(cls.select(lambda exit: (
+                exit.origin is origin and exit.to is destination) or (
+                exit.to is origin and exit.origin is destination)
+        ))
+        return exits[0] if exits else None
+
 
 class ExitHandler:
 
@@ -148,3 +157,7 @@ class ExitHandler:
                 reprs.append(f"<BackExit({exit.back})>")
 
         return repr(reprs)
+
+    def all(self):
+        """Return all exits."""
+        return list(Exit.of(self.room))

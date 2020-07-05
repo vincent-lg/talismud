@@ -38,7 +38,7 @@ from pony.orm import Required
 from yaml import safe_load_all
 
 from data.base import db, PicklableEntity
-from data.blueprints.document import create
+from data.blueprints.blueprint import Blueprint as BP
 from data.mixins import HasMixins
 
 # Logger
@@ -92,9 +92,9 @@ class Blueprint(PicklableEntity, db.Entity, metaclass=HasMixins):
         return last_modified > record.modified
 
     @classmethod
-    def apply(cls, path: Path):
+    def extract(cls, path: Path):
         """
-        Apply the specified path.
+        Extract the specified path.
 
         The path is applied whether should_apply is true or not.
         Therefore, you can use this method to override the should_apply
@@ -112,20 +112,12 @@ class Blueprint(PicklableEntity, db.Entity, metaclass=HasMixins):
         else:
             record.modified = datetime.fromtimestamp(path.stat().st_mtime)
 
-        # Apply the file
+        # Read the file
         with path.open("r", encoding="utf-8") as file:
-            documents = safe_load_all(file)
+            documents = safe_load_all(file.read())
+            blue = BP(list(documents))
 
-            num_docs = 0
-            for document in documents:
-                document = create(document)
-                num_docs += 1
-                document.apply()
-
-        logger.info(
-            f"{relative}: applied {num_docs} "
-            f"document{'s' if num_docs > 1 else ''}"
-        )
+        return blue
 
     @classmethod
     def apply_all(cls, if_needed: bool = True):
@@ -150,4 +142,16 @@ class Blueprint(PicklableEntity, db.Entity, metaclass=HasMixins):
                 logger.debug(f"{path} is ignored.")
                 continue
 
-            cls.apply(path)
+            blue = cls.extract(path)
+            num_docs = len(blue.documents)
+            logger.info(
+                f"Preparing to apply {num_docs} "
+                f"document{'s' if num_docs > 1 else ''}"
+            )
+
+            blue.apply()
+            num_docs = blue.applied
+            logger.info(
+                f"{path}: applied {num_docs} "
+                f"document{'s' if num_docs > 1 else ''}"
+            )

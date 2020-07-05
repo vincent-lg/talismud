@@ -50,6 +50,7 @@ from data.base import db
 
 NOT_SET = object()
 DOCUMENT_TYPES = {
+        "exit": "data.blueprints.exit.ExitDocument",
         "room": "data.blueprints.room.RoomDocument",
 }
 
@@ -100,6 +101,7 @@ class Document:
     fields = {}
 
     def __init__(self):
+        self.applied = False
         self.cleaned = Namespace()
 
     def fill(self, document: Dict[str, Any],
@@ -113,11 +115,12 @@ class Document:
                     a subset of document.
 
         """
-        section = section or type(self).fields
+        section = section or dict(type(self).fields)
         for key, definition in section.items():
+            definition = dict(definition)
             def_type = definition.pop("type", None)
             if def_type is None:
-                raise ValueError("the definition of {key!r} has no type")
+                raise ValueError(f"the definition of {key!r} has no type")
 
             method_name = f"is_proper_{def_type}"
             value = document.get(key, NOT_SET)
@@ -150,6 +153,9 @@ class Document:
     def default_int(self):
         return 0
 
+    def default_subset(self):
+        return []
+
     def is_proper_int(self, value, document, presence="required"):
         """Parse an integer."""
         if presence == "required":
@@ -168,6 +174,21 @@ class Document:
             return ok
 
         raise ValueError(f"presence {presence} not known")
+
+    def is_proper_subset(self, value, document, document_type, number="any"):
+        """Is it a proper subset?"""
+        if document_type not in DOCUMENT_TYPES:
+            raise ValueError(f"{document!r} isn't defined")
+
+        if value is NOT_SET:
+            return []
+
+        sub_docs = []
+        for sub_section in value:
+            sub_section["type"] = document_type
+            sub_docs.append(create(sub_section))
+
+        return sub_docs
 
 
 def create(document: Dict[str, Any]):

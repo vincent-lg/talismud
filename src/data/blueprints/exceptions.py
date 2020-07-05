@@ -27,56 +27,23 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Room entity."""
+"""Exceptions for the blueprint system.
 
-from pony.orm import Optional, Required, Set
+Exceptions:
+    DelayMe: delay processing the current document.
+    DelayDocument: delay processing of the given document.
 
-from data.base import db, PicklableEntity
-from data.exit import ExitHandler
-from data.mixins import (HasAttributes, HasDescription,
-        HasLocation, HasMixins, HasTags)
-from data.properties import lazy_property
+"""
 
-class Room(HasAttributes, HasDescription, HasLocation, HasTags,
-        PicklableEntity, db.Entity, metaclass=HasMixins):
+class DelayMe(Exception):
 
-    """Room entity."""
+    """The current document should be delayed."""
 
-    title = Required(str, max_len=128)
-    x = Optional(int)
-    y = Optional(int)
-    z = Optional(int)
-    barcode = Required(str, max_len=32, unique=True, index=True)
-    exits_from = Set("Exit", reverse="origin")
-    exits_to = Set("Exit", reverse="to")
+    pass
 
-    @lazy_property
-    def exits(self):
-        """Return the ExitHandler."""
-        return ExitHandler(self)
+class DelayDocument(Exception):
 
-    def look(self, character: db.Character):
-        """
-        The character wants to look at this room.
+    """The given document should be delayed."""
 
-        Args:
-            character (Character): who looks at this room.
-
-        """
-        description = self.description and self.description.format() or ""
-        exits = self.exits.all()
-        if exits:
-            exits = "Obvious exits: " + ", ".join([ex.name_for(self) for ex in exits])
-        else:
-            exits = "Obvious exits: well, none"
-
-        lines = [
-            self.title,
-            "",
-            description,
-            "",
-            exits,
-            "HP: 100",
-        ]
-
-        return "\n".join(lines)
+    def __init__(self, document):
+        self.document = document
