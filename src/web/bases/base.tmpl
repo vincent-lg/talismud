@@ -6,6 +6,11 @@
  *   content: change the page main content.
  *   scripts: add extra <script> lines, at the bottom of the page.
  *
+ * You can use the #def directive in a template to override one or
+ * more blocks.  For instance:
+ *     #extends base
+ *     #def title : Welcome
+ *    ...
  *#
 <!doctype html>
 <html lang="en">
@@ -25,8 +30,7 @@
 
     <div class="collapse navbar-collapse" id="main-menu">
       <ul class="navbar-nav mr-auto">
-        <li class="nav-item active"><a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Link</a></li>
+        #include "web/bases/menu.tmpl"
       </ul>
     </div>
   </nav>

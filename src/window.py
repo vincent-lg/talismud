@@ -1,3 +1,5 @@
+import traceback
+
 from bui import Window
 
 from service.launcher import MUDOp, MUDStatus
@@ -29,8 +31,17 @@ class TalismudWindow(Window):
         """When clicking on the start button."""
         self["start"].disable()
         self["status"].value = "Starting Talismud, please wait..."
-        await self.service.action_start()
-        await self.check_status()
+        try:
+            await self.service.action_start()
+        except Exception as err:
+            self["status"].value = traceback.format_exc()
+            return
+
+        try:
+            await self.check_status()
+        except Exception as err:
+            self["status"].value = str(err)
+            return
 
         # If an admin is needed
         if MUDOp.NEED_ADMIN in self.service.operations:
