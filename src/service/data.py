@@ -123,6 +123,7 @@ class Service(BaseService):
         if start_room or return_room:
             commit()
         db.Delay.schedule()
+        db.Blueprint.apply_all()
 
     def create_session(self, session_id):
         """Create a new, empty session in the database, return it."""

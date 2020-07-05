@@ -56,11 +56,7 @@ class Game(BaseContext):
         """Just display the character's location."""
         character = self.session.character
         if character.location:
-            title = character.location.title
-        else:
-            title = "Unknown location... something's very wrong here!"
-
-        return title + "\n\nHP: 100"
+            return character.location.look(character)
 
     async def input(self, command: str):
         """The character has entered something."""

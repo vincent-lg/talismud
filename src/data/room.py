@@ -54,3 +54,14 @@ class Room(HasAttributes, HasDescription, HasLocation, HasTags,
     def exits(self):
         """Return the ExitHandler."""
         return ExitHandler(self)
+
+    def look(self, character: db.Character):
+        """
+        The character wants to look at this room.
+
+        Args:
+            character (Character): who looks at this room.
+
+        """
+        description = self.description and self.description.format() or ""
+        return f"{self.title}\n{description}\n\nHP: 100"
