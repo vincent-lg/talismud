@@ -35,11 +35,6 @@ from getpass import getpass
 
 from process.base import Process
 
-try:
-    from window import TalismudWindow
-except ModuleNotFoundError:
-    TalismudWindow = None
-
 parser = argparse.ArgumentParser()
 parser.set_defaults(action="help")
 subparsers = parser.add_subparsers()
@@ -100,14 +95,8 @@ class Launcher(Process):
             await launcher.action_restart()
         elif args.action == "shell":
             await launcher.action_shell()
-        elif TalismudWindow is None:
-            parser.print_help()
         else:
-            self.window = TalismudWindow.parse_layout(TalismudWindow)
-            self.window.process = self
-            self.window.service = launcher
-            self.window_task = asyncio.create_task(self.start_window())
-            return
+            parser.print_help()
 
         self.should_stop.set()
 
@@ -115,16 +104,3 @@ class Launcher(Process):
         """Called when the process is about to be stopped."""
         if self.window_task:
             self.window_task.cancel()
-
-    async def start_window(self):
-        """Start the TalisMUD window."""
-        loop = asyncio.get_event_loop()
-        try:
-            await self.window._start(loop)
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            self.logger.exception("An error occurred in the TalisMUD window:")
-        finally:
-            self.window._stop()
-            self.window.close()
