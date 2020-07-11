@@ -6,3 +6,4 @@ cryptography==2.9.2
 Logbook==1.5.3
 pony==0.7.13
 PyInstaller==3.6
+PyYAML==5.3.1
