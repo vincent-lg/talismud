@@ -55,6 +55,11 @@ class Character(HasAttributes, HasCache, HasLocation, HasPermissions,
     created_on = Required(datetime, default=datetime.utcnow)
     db_command_stack = Optional(bytes)
 
+    async def move_to(self, exit):
+        """Move to the specified exit."""
+        self.location = exit.destination_for(self.location)
+        await self.msg(self.location.look(self))
+
     @lazy_property
     def command_stack(self):
         """Return the stored or newly-bulid command stack."""

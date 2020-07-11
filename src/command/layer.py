@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Optional
 
 from command.base import Command, logger
+from command.special.exit import ExitCommand
 
 class CommandLayer:
 
@@ -90,12 +91,9 @@ class CommandLayer:
 
             seps[sep] = (before, after)
 
-        logger.debug(f"Seps: {seps}")
         for command in self.commands:
-            logger.debug(f"Test {command.name}, seps={command.seps!r}")
             for sep in command.seps:
                 before, after = seps[sep]
-                logger.debug(f"Test {before!r} == {command.name!r}")
                 if before == command.name:
                     if character and not command.can_run(character):
                         continue
@@ -145,13 +143,40 @@ class StaticCommandLayer(CommandLayer):
         layer = self.load(self.character)
         self.commands = layer.commands
 
+    def find_command(self, command: str) -> Optional[Command]:
+        """
+        Test exits, then try to find the command based on its name.
+
+        Returns either the matching command, or `None` if not found.
+
+        Args:
+            name (str): the command name.
+
+        Returns:
+            match (Command or None): the matching command.
+
+        Note:
+            Overrides the `find_command` method of all layers.
+            Test exits if there's a valid character before testing
+            out commands.
+
+        """
+        if (character := self.character):
+            location = character.location
+            exits = location.exits
+            if (exit := exits.match(character, command)):
+                return ExitCommand(character, exit)
+
+        return super().find_command(command)
+
     @classmethod
     def load(cls, character):
         """Load the static layer from the file system."""
         layer = cls(character)
         parent_dir = Path("command")
         exclude = [
-            parent_dir / "args.py",
+            parent_dir / "args",
+            parent_dir / "special",
             parent_dir / "base.py",
             parent_dir / "layer.py",
             parent_dir / "stack.py",
@@ -159,6 +184,9 @@ class StaticCommandLayer(CommandLayer):
 
         for path in parent_dir.rglob("*.py"):
             if path in exclude:
+                continue
+
+            if any(to_ex in path.parents for to_ex in exclude):
                 continue
 
             if path.name.startswith("_"):

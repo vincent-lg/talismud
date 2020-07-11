@@ -29,6 +29,8 @@
 
 """Exit entity, to connect rooms bidirectionally."""
 
+import typing as ty
+
 from pony.orm import Optional, Required, Set
 
 from data.base import db, PicklableEntity
@@ -108,6 +110,15 @@ class Exit(HasAttributes, HasTags, PicklableEntity, db.Entity,
                 f"{room} is neither origin not destination of this exit"
         )
 
+    def destination_for(self, room):
+        """Return the destination for the given room."""
+        if self.origin is room:
+            return self.to
+        elif self.to is room:
+            return self.origin
+
+        raise ValueError(f"{room} is neither origin not destination here")
+
     @classmethod
     def of(cls, room):
         """
@@ -161,3 +172,22 @@ class ExitHandler:
     def all(self):
         """Return all exits."""
         return list(Exit.of(self.room))
+
+    def match(self, character: db.Character, name: str) -> ty.Optional[Exit]:
+        """
+        Return whether the given match is an exit name.
+
+        Args:
+            character (Character): the character searching exits.
+            name (str): the exit name.
+
+        Returns:
+            Exit or None: found or not found exit.
+
+        """
+        name = name.lower()
+        for exit in Exit.of(self.room):
+            if exit.name_for(self.room) == name:
+                return exit
+
+        return None # Explicit is better than implicit
