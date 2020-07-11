@@ -37,6 +37,8 @@ class ExitDocument(Document):
 
     """Exit document to add exits in blueprints."""
 
+    doc_type = "exit"
+    doc_dump = False
     fields = {
         "name": {
             "type": "str",

@@ -29,14 +29,18 @@
 
 """Blueprint document for rooms."""
 
+from typing import Optional
+
 from data.base import db
 from data.blueprints.document import Document
-from data.blueprints.exceptions import DelayMe, DelayDocument
+from data.blueprints.exceptions import BlueprintAlert, DelayMe, DelayDocument
 
 class RoomDocument(Document):
 
     """Room document to add rooms in blueprints."""
 
+    doc_type = "room"
+    doc_dump = True
     fields = {
         "barcode": {
             "type": "str",
@@ -69,6 +73,85 @@ class RoomDocument(Document):
             "document_type": "exit",
         },
     }
+
+    def add_neighbor(self, barcode: str, title: str, x: Optional[int] = None,
+            y: Optional[int] = None, z: Optional[int] = None,
+            description: Optional[str] = None,
+            exit_to: Optional[str] = None, exit_from: Optional[str] = None):
+        """
+        Add a room, optionally connected to the current room.
+
+        Args:
+            barcode (str): the new room's barcode.
+            title (str): the new room's title.
+            x (int, optional): the X coordinate of the new room.
+            z (int, optional): the Z coordinate of the new room.
+            z (int, optional): the Z coordinate of the new room.
+            description (str, optional): the new room's description.
+            exit_to (str, optional): the name of the exit from
+                    self to the new room.  If left to None, no exit
+                    is created.
+            exit_from (str, optional): the name of the exit from
+                    the new room to self.  If left to None, no exit
+                    is created.
+
+        Returns:
+            new_room (RoomDocument): the new room if successful.
+
+        Raises:
+            BlueprintAlert if something went wrong.
+
+        """
+        room = self.cleaned
+        if (x, y, z) in self.blueprint.coords:
+            raise BlueprintAlert(
+                    f"There already is a room in X={x}, Y={y}, Z={z}."
+            )
+
+        if exit_to and [exit for exit in room.exits
+                if exit.cleaned.name == exit_to]:
+            raise BlueprintAlert(
+                    f"The current room {room.barcode} already "
+                    f"has an exit leading {exit_to}."
+            )
+
+        if barcode in self.blueprint.rooms:
+            raise BlueprintAlert(f"the barcode {barcode} is already used")
+
+        new_room = self.blueprint.create_document({
+                "type": "room",
+                "barcode": barcode,
+                "x": x,
+                "y": y,
+                "z": z,
+                "title": title,
+                "description": description,
+        })
+        self.blueprint.documents.append(new_room)
+
+        # Create the exit from room to new_room
+        if exit_to:
+            new_exit = self.blueprint.create_document({
+                    "type": "exit",
+                    "name": exit_to,
+                    "back": exit_from,
+                    "origin": room.barcode,
+                    "destination": new_room.cleaned.barcode,
+            })
+            self.blueprint.documents.append(new_exit)
+            room.exits.append(new_exit)
+
+        # Create the back exit
+        if exit_from:
+            back_exit = self.blueprint.create_document({
+                    "type": "exit",
+                    "name": exit_from,
+                    "back": exit_to,
+                    "origin": new_room.cleaned.barcode,
+                    "destination": room.barcode,
+            })
+            self.blueprint.documents.append(back_exit)
+            new_room.cleaned.exits.append(back_exit)
 
     def apply(self):
         """Apply the document, create a room."""

@@ -47,3 +47,10 @@ class DelayDocument(Exception):
 
     def __init__(self, document):
         self.document = document
+
+
+class BlueprintAlert(Exception):
+
+    """An alert occurred in the blueprint, the user should be notified."""
+
+    pass

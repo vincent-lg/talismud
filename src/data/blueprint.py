@@ -30,6 +30,7 @@
 """Blueprint entity."""
 
 from datetime import datetime
+from importlib import import_module
 from pathlib import Path
 from typing import Callable, Union
 
@@ -39,7 +40,9 @@ from yaml import safe_load_all
 
 from data.base import db, PicklableEntity
 from data.blueprints.blueprint import Blueprint as BP
+from data.blueprints.parser.base import AbstractParser
 from data.mixins import HasMixins
+import settings
 
 # Logger
 logger = Logger()
@@ -69,89 +72,23 @@ class Blueprint(PicklableEntity, db.Entity, metaclass=HasMixins):
     path = Required(str)
 
     @classmethod
-    def should_apply(cls, path: Path) -> bool:
-        """Should the specified file be applied?
+    def apply_all(cls):
+        """Apply all applicable blueprints."""
+        parser_module = settings.BLUEPRINT_PARSER
+        module = import_module(f"data.blueprints.parser.{parser_module}")
+        parsers = [obj for obj in module.__dict__.values() if
+                isinstance(obj, type) and issubclass(obj, AbstractParser)
+                and obj is not AbstractParser]
+        if len(parsers) != 1:
+            raise ValueError(f"ambiguous parser in {module}: {parsers}")
 
-        Args:
-            path (pathlib.Path): the file path.
+        parser = parsers[0]
+        # Get settings
+        options = {key[10:].lower(): value for
+                key, value in settings.__dict__.items() if key.startswith(
+                "BLUEPRINT_")}
+        options.pop("parser")
+        parser = parser(**options)
+        parser.retrieve_blueprints()
+        parser.apply()
 
-        It should be applied if it is not present in the database,
-        or if the modification date is less recent than the one stored.
-
-        Returns:
-            should_apply (bool): thould the file be applied?
-
-        """
-        relative = path.relative_to(PARENT)
-        record = cls.get(path=str(relative))
-        if record is None:
-            return True
-
-        # Compare modification dates
-        last_modified = datetime.fromtimestamp(path.stat().st_mtime)
-        return last_modified > record.modified
-
-    @classmethod
-    def extract(cls, path: Path):
-        """
-        Extract the specified path.
-
-        The path is applied whether should_apply is true or not.
-        Therefore, you can use this method to override the should_apply
-        decision.
-
-        Args:
-            path (pathlib.Path): the path to the file.
-
-        """
-        relative = path.relative_to(PARENT)
-        record = cls.get(path=str(relative))
-        if record is None:
-            record = cls(path=str(relative),
-                    modified=datetime.fromtimestamp(path.stat().st_mtime))
-        else:
-            record.modified = datetime.fromtimestamp(path.stat().st_mtime)
-
-        # Read the file
-        with path.open("r", encoding="utf-8") as file:
-            documents = safe_load_all(file.read())
-            blue = BP(list(documents))
-
-        return blue
-
-    @classmethod
-    def apply_all(cls, if_needed: bool = True):
-        """
-        Apply all blueprints.
-
-        By default, only needed blueprints (that is, these that
-        have been modified) are applied, the others are ignored.
-        You can ovverride this by setting `if_needed` to False.
-
-        Args:
-            if_needed (bool, optional): only needed blueprints are applied.
-
-        """
-        paths = list(PARENT.rglob("*.yml"))
-        logger.debug(
-            f"{len(paths)} file{'s' if len(paths) > 1 else ''} "
-            f"could be applied."
-        )
-        for path in paths:
-            if if_needed and not cls.should_apply(path):
-                logger.debug(f"{path} is ignored.")
-                continue
-
-            blue = cls.extract(path)
-            num_docs = len(blue.documents)
-            logger.info(
-                f"Preparing to apply {num_docs} "
-                f"document{'s' if num_docs > 1 else ''}"
-            )
-
-            blue.apply()
-            num_docs = blue.applied
-            logger.info(
-                f"{path}: applied {num_docs} "
-                f"document{'s' if num_docs > 1 else ''}"
-            )

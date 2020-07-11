@@ -1,0 +1,7 @@
+<dialog title="Editing an exit">
+  <text x=0 y=0 width=4 id=name>Exit name:</text>
+  <text x=0 y=1 width=4 id=destination>Destination:</text>
+  <text x=1 y=2 width=2 id=back>Back exit in the destination (if any):</text>
+  <button x=2 y=5 set_true>OK</button>
+  <button x=4 y=5 set_false>Cancel</button>
+</dialog>

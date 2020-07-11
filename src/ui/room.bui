@@ -1,0 +1,14 @@
+<dialog title="Editing a room">
+  <text x=0 y=0 id=barcode>Barcodee:</text>
+  <text x=2 y=1 width=4 id=title>Title:</text>
+  <text x=1 y=1 width=4 height=2 id=description multiline>Description:</text>
+  <table x=1 y=4 id=exits>
+    <col>Name</col>
+    <col>Destination</col>
+    <col>Two ways</col>
+  </table>
+  <button x=3 y=4 id=remove_exit>&Remove this exit</button>
+  <button x=5 y=4 id=add_exit>&Add an exit</button>
+  <button x=1 y=5 set_true>OK</button>
+  <button x=4 y=5 set_false>Cancel</button>
+</dialog>

@@ -52,6 +52,56 @@ class Blueprint:
         self.delayed = []
         self.applied = 0
 
+        # Document types
+        self.rooms = {} # {barcode: document}
+        self.coords = {} # {(x, y, z): document}
+
+        for i, document in enumerate(self.documents):
+            document = self.create_document(document)
+            self.documents[i] = document
+
+    @property
+    def dictionaries(self):
+        dictionaries = []
+        for document in self.documents:
+            if not document.doc_dump:
+                continue
+
+            dictionary = {"type": document.doc_type}
+            dictionary.update(document.dictionary)
+            dictionaries.append(dictionary)
+
+        return dictionaries
+
+    def create_document(self, document: Dict[str, Any]):
+        """
+        Create and add the document to this blueprint.
+
+        Args:
+            document (dict): the document to add as a dictionary.
+
+        Returns:
+            document (Document): the created document.
+
+        """
+        document = create(self, document)
+
+        # Action based on type
+        method = getattr(self, f"handle_{document.doc_type}", None)
+        if method:
+            method(document)
+
+        return document
+
+    def handle_room(self, document):
+        """Handle the room document."""
+        with document.cleaned as room:
+            self.rooms[room.barcode] = document
+            if all(data is not None for data in (
+                    room.x, room.y, room.z)):
+                x, y, z = room.x, room.y, room.z
+                self.coords[(x, y, z)] = document
+
     def apply(self):
         """
         Apply as many documents as possible.
@@ -64,8 +114,6 @@ class Blueprint:
         """
         delayed = []
         for document in self.documents:
-            document = create(document)
-
             applied = False
             while not applied:
                 try:

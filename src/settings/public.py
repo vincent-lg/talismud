@@ -116,3 +116,15 @@ RETURN_ROOM = "begin"
 # Preferred encoding for new sessions without a configuration.
 # (Individual clients/players can change that setting for their connection.)
 DEFAULT_ENCODING = "utf-8"
+
+# 6. Content creation settings
+# These settings affect how your builders can work to contribute content
+# to TalisMUD.
+# Blueprint parser
+BLUEPRINT_PARSER = "yaml"
+
+# Blueprint directory to store blueprint files
+BLUEPRINT_DIRECTORY = "blueprints"
+
+# Blueprint backup mode
+BLUEPRINT_BACKUP = True

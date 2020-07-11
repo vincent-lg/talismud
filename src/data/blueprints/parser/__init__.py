@@ -27,10 +27,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-def str_presenter(dumper, data):
-    if len(data.splitlines()) > 1:  # check for multiline string
-      return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+"""Package containing the blueprint parsers.
 
-    return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+See 'base.py' for more information.  Concrete parsers are
+stored in this package, with a parser per file.
 
-yaml.add_representer(str, str_presenter)
+"""

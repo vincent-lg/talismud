@@ -1,0 +1,17 @@
+<window title="TalisMUD - Builder interface">
+  <menubar>
+    <menu name="Blueprint">
+      <item id=new>New blueprint...</item>
+      <item id=open>Open an existing blueprint...</item>
+      <item id=save>Save this blueprint</item>
+      <item>Quit</item>
+    </menu>
+  </menubar>
+
+  <text x=0 y=0 width=5 height=5 id=map read-only multiline>Empty</text>
+  <table x=6 y=2 id=blueprints>
+    <col>Name</col>
+    <col>Updated</col>
+    <col>Modified</col>
+  </table>
+</window>

@@ -3,6 +3,7 @@ import traceback
 from bui import Window
 
 from service.launcher import MUDOp, MUDStatus
+from ui.builder import BuilderWindow
 
 class TalismudWindow(Window):
 
@@ -12,6 +13,10 @@ class TalismudWindow(Window):
         """The window is ready to be displayed."""
         self["status"].value = "Getting MUD status..."
         self.schedule(self.check_status())
+
+    def on_build(self):
+        """The build menu item was clicked on."""
+        self.open_window(BuilderWindow, child=False)
 
     async def check_status(self):
         """Try to report on the MUD status."""

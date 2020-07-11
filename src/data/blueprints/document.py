@@ -100,9 +100,26 @@ class Document:
 
     fields = {}
 
-    def __init__(self):
+    def __init__(self, blueprint):
+        self.blueprint = blueprint
         self.applied = False
         self.cleaned = Namespace()
+
+    @property
+    def dictionary(self):
+        res = {}
+        for key in self.fields.keys():
+            value = getattr(self.cleaned, key)
+            if isinstance(value, Document):
+                value = value.dictionary
+            elif isinstance(value, list):
+                for i, elt in enumerate(value):
+                    if isinstance(elt, Document):
+                        value[i] = elt.dictionary
+
+            res[key] = value
+
+        return res
 
     def fill(self, document: Dict[str, Any],
             section: Optional[Dict[str, Any]] = None):
@@ -186,16 +203,17 @@ class Document:
         sub_docs = []
         for sub_section in value:
             sub_section["type"] = document_type
-            sub_docs.append(create(sub_section))
+            sub_docs.append(create(self.blueprint, sub_section))
 
         return sub_docs
 
 
-def create(document: Dict[str, Any]):
+def create(blueprint, document: Dict[str, Any]):
     """
     Create a document of the specified type.
 
     Args:
+        blueprint (Blueprint): the parent blueprint.
         document (dict): the document as a dictionary.
 
     Note: the dictionary should at least have a field named "type",
@@ -218,10 +236,14 @@ def create(document: Dict[str, Any]):
     if DocClass is None:
         raise ValueError(f"cannot find the class {document_class} in {document_module}")
 
-    doc = DocClass()
+    doc = DocClass(blueprint)
     doc.fill(document)
     return doc
 
 class Namespace:
 
-    pass
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
