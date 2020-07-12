@@ -10,6 +10,7 @@ class Reload(Command):
 
     """
 
+    alias = "restart"
     args = CommandArgs()
 
     async def run(self, args):

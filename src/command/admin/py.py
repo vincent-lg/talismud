@@ -11,6 +11,7 @@ class Py(Command):
 
     """
 
+    alias = "python"
     args = CommandArgs()
     args.add_argument("text", dest="code")
 

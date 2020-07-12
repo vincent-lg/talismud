@@ -94,7 +94,7 @@ class Command:
         args = CommandArgs()
         args.add_argument("object", optional=True)
 
-        async def call(self, args):
+        async def run(self, args):
             '''The command is executed.'''
             await self.msg("Ho, look!")
     ```
@@ -147,6 +147,7 @@ class Command:
     #permissions = "command permissions"
     args = CommandArgs()
     seps = " "
+    alias = ()
 
     def __init__(self, character=None, sep=None, arguments=""):
         self.character = character
@@ -199,6 +200,24 @@ class Command:
 
         """
         await self.msg(f"Great!  You reached the command {self.name}.")
+
+    async def parse_and_run(self):
+        """
+        Parse and, if possible, run the command.
+
+        This is a shortcut to first parse, then run the command
+        asynchronously withint a try/except block to catch errors.
+
+        """
+        try:
+            args = self.parse()
+            args = self.args_to_dict(args)
+            await self.run(**args)
+        except Exception:
+            logger.exception(
+                    f"An error occurred while parsing and running the "
+                    f"{self.name} commnd:"
+            )
 
     async def msg(self, text: str):
         """

@@ -79,7 +79,6 @@ class CommandLayer:
             match (Command or None): the matching command.
 
         """
-        # If the character is specified, check permissions
         character = self.character
         seps = {sep: () for comm in self.commands for sep in comm.seps}
         for sep in seps.keys():
@@ -92,9 +91,13 @@ class CommandLayer:
             seps[sep] = (before, after)
 
         for command in self.commands:
+            aliases = command.alias
+            if isinstance(aliases, str):
+                aliases = [aliases]
+
             for sep in command.seps:
                 before, after = seps[sep]
-                if before == command.name:
+                if before == command.name or before in aliases:
                     if character and not command.can_run(character):
                         continue
 

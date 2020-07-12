@@ -10,6 +10,8 @@ class Look(Command):
 
     """
 
+    alias = "l"
+
     async def run(self, args):
         """Run the command."""
         room = self.character.location
