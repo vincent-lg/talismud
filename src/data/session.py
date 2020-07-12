@@ -39,6 +39,7 @@ from context.base import BaseContext
 from data.base import db, PicklableEntity
 from data.mixins import HasAttributes, HasMixins, HasStorage
 from data.properties import lazy_property
+import settings
 
 # Asynchronous queue of all session output messages
 OUTPUT = asyncio.Queue()
@@ -92,9 +93,32 @@ class Session(HasAttributes, HasStorage, PicklableEntity, db.Entity,
         Sending bytes allows to bypass session encoding, which might
         be handy for encoding test on the client side, for instance.
 
+        Awaiting on this method does not guarantee the message is
+        sent to the client.  The relationship between game session
+        and portal session is not strongly maintained to avoid
+        slowing the game down if the portal is busy.  Therefore,
+        if you await on a `session.msg`, be aware that the text
+        might not be sent to the client when the method returns.
+
+        Note about encoding:
+            If the sent text should be encoded (that is, if its type
+            is `str`), the session encoding is first selected, if it
+            exists.  The session encoding is stored in the session
+            storage, `session.storage["encoding"]`.  The
+            `settings.DEFAULT_ENCODING` is used if the session
+            didn't specify any encoding.  By default, errors
+            during the process are replaced, so accented letters not
+            supported by the specified encoding will appear as ?.
+
         """
         if isinstance(text, str):
-            encoded = text.encode("ISO-8859-15")
+            encoding = self.storage.get("encoding", settings.DEFAULT_ENCODING)
+            try:
+                encoded = text.encode(encoding, errors="replace")
+            except LookupError:
+                # Use utf-8 as a default
+                encoding = "utf-8"
+                encoded = text.encode(encoding, errors="replace")
         else:
             encoded = text
 

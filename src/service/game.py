@@ -35,6 +35,7 @@ from data.base import db
 from data.session import CMDS_TO_PORTAL, OUTPUT
 from service.shell import Shell
 from service.base import BaseService
+import settings
 
 CONSOLE = Shell({"db": db}, "<shell>")
 
@@ -160,18 +161,39 @@ class Service(BaseService):
         await session.context.refresh()
 
     async def handle_input(self, reader, session_id, command):
-        """Handle a received command from Telnet."""
-        command = command.decode()
+        """
+        Handle a received command from a Telnet-like network.
 
+        The specified command is bytes at this point.  It will be
+        decoded using the session encoding
+        (`session.storage["encoding"]`) if it exists, or the
+        DEFAULT_ENCODING setting key.
+
+        Args:
+            session_id (uuid.UUID): the session ID.
+            command (bytes): the command entered by the user.
+
+        """
         # Try to find the session
         try:
             session = self.sessions[session_id]
         except KeyError:
+            # Create it in the database
             session = db.Session[session_id]
             self.sessions[session_id] = session
+
+        # Decode the command
+        encoding = session.storage.get("encoding", settings.DEFAULT_ENCODING)
+        try:
+            decoded = command.decode(encoding, errors="replace")
+        except LookupError:
+            # Use utf-8 as a default
+            encoding = "utf-8"
+            decoded = command.decode(encoding, errors="replace")
+
+        # Send the decoded text to the session's active context
         context = session.context
-        self.logger.debug(f"Received {command!r} from Telnet.")
-        await context.handle_input(command)
+        await context.handle_input(decoded)
 
     async def handle_create_admin(self, reader, username: str,
             password: str, email: str = ""):
