@@ -91,8 +91,15 @@ class VariableFormatter(Formatter):
 
     """Formatter specifically designed for variables in messages."""
 
-    def __init__(self, character):
+    def __init__(self, character, variables=None):
         self.character = character
+        self.variables = variables
+        if variables is None:
+            self.variables = {}
+            frame = inspect.currentframe().f_back
+            while frame and (locals := frame.f_locals):
+                variables.update(dict(locals))
+                frame = frame.f_back
 
     def get_field(self, field_name, args, kwargs):
         """
@@ -108,16 +115,12 @@ class VariableFormatter(Formatter):
         if field_name.isdigit() or field_name in kwargs:
             return super().get_field(full_name, args, kwargs)
 
-        frame = inspect.currentframe().f_back
-        while frame and (locals := frame.f_locals):
-            value = locals.get(field_name, UNKNOWN)
-            if value is UNKNOWN:
-                frame = frame.f_back
-            else:
-                for name in names[1:]:
-                    value = getattr(value, name)
+        value = self.variables.get(field_name, UNKNOWN)
+        if value is not UNKNOWN:
+            for name in names[1:]:
+                value = getattr(value, name)
 
-                return (value, ".".join(names))
+            return (value, ".".join(names))
 
         raise ValueError(f"cannot find the variable name: {field_name!r}")
 
