@@ -25,7 +25,7 @@ The role of the assembly is to put it in a linar list of operations.  With this 
 
 These two operations represent how the program will run:
 
-1. First 136 is pushed onto the stack of value.  We'll talk about the [stack-and-variables](#stack) in more details in another section.
+1. First 136 is pushed onto the stack of value.  We'll talk about the [stack](#stack-and-variables) in more details in another section.
 2. Next, the variable of name 'data' should be created.  Its value is expected to be onto the stack.  So `STORE` will remove the last entry from the stack and assign a variable named 'data' to it (136).
 
 This is important: suppose, for any reason, the program stops between line 1 and 2, that is to say, when 136 has been placed onto the stack but before the variable was created.  If the assembly and the stack are saved and the script continues later, then no logic error will occur.  This concept of potential pauses is extremely important and was a requirement from the start.
