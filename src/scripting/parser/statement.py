@@ -121,7 +121,7 @@ class IfStmt(Concat):
     Composed of:
         if <BoolExp>: <NewLine>
           <StmtList>
-        [else <NewLine>
+        [else: <NewLine>
           <StmtList>
         ]
         <NewLine>
@@ -134,8 +134,9 @@ class IfStmt(Concat):
 
     def __init__(self):
         super().__init__(Keyword('if'), BoolExp(), Symbol(':'), Newline(),
-                Lazy(StmtList), Opt(Newline() + Keyword('else') + Newline() +
-                Lazy(StmtList)), Newline(), Keyword('end'))
+                Lazy(StmtList), Opt(Newline() + Keyword('else') +
+                Symbol(':') + Newline() + Lazy(StmtList)), Newline(),
+                Keyword('end'))
 
     async def process(self, tokens):
         """Process the tokens."""
