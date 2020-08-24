@@ -27,37 +27,28 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""LE assembly expression, to compare two values equal or lower than."""
+"""Debug namespace.
 
-from scripting.assembly.abc import BaseExpression
+This namespace contains debugging information that
+shouldn't be used in production.  This information
+can be accessed from `__debug` in the top-level
+namespace.
 
-class Le(BaseExpression):
+"""
 
-    """
-    LE assembly expression.
+from scripting.namespace.abc import BaseNamespace
 
-    Args:
-        None.
+class Debug(BaseNamespace):
 
-    This expression's only role is to compare <= two values from the
-    stack.  It pops these two values, compares them equal or
-    lower than equal and pushes the result back onto the stack,
-    as a boolean.
+    """Debug namespace."""
 
-    """
+    def __init__(self, script):
+        super().__init__(script)
+        self.attributes = {
+                "TOKENS": False,
+                "show_variables": self.show_variables,
+        }
 
-    name = "LE"
-
-    @classmethod
-    def process(cls, script, stack):
-        """
-        Process this expression.
-
-        Args:
-            script (Script): the script object.
-            stak (LifoQueue): the stack.
-
-        """
-        value2 = stack.get(block=False)
-        value1 = stack.get(block=False)
-        stack.put(value1 <= value2, block=False)
+    def show_variables(self):
+        """Show the top-level variables."""
+        print(self.script.top_level.attributes)

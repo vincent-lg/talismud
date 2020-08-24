@@ -60,7 +60,11 @@ class BaseRepresentation(metaclass=RepresentationMeta):
 
     name = ""
     represent = None # What class to represent? None means top-level
-    attributes = () # List of str of object attributes
+    attributes = {}
 
     def __init__(self, script):
         self.script = script
+
+        # Create the attributes
+        for name, value in self.attributes.items():
+            setattr(self, name, value)

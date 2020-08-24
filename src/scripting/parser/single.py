@@ -40,7 +40,7 @@ Parsers in this file:
 
 from scripting.ast import single as ast
 from scripting.exceptions import NoMoreToken, NeedMore
-from scripting.parser.combinator import Concat, Opt, Rep, Symbol, Tag
+from scripting.parser.combinator import Concat, Exp, Opt, Rep, Symbol, Tag
 from scripting.parser.parser import Parser
 
 class Floating(Tag):
@@ -55,10 +55,32 @@ class Floating(Tag):
         return ast.Float(float(super().process(tokens)))
 
 
+class IdOrObjectName(Exp):
+
+    """
+    Parser for a variable or object name.
+
+    The parser itself is an expression <id>.<id>.<id.>>>, so that
+    `a.b` will be parsed accurately.
+
+    """
+
+    def __init__(self):
+        self.parser = Tag("ID")
+        self.separator = Symbol(".")
+
+    def join(self, left, right):
+        """Join the two sides of an object name."""
+        if isinstance(left, tuple):
+            return left + (right, )
+
+        return left, right
+
+
 class Identifier(Parser):
 
     """
-    Identifier parser, to parse variable names.
+    Identifier parser, to parse variable or object names.
 
     Building an identifier parser can take an optional keyword
     argument: `signed`, which is set to `False` by default, will add
@@ -69,7 +91,7 @@ class Identifier(Parser):
     """
 
     def __init__(self, signed=False):
-        self.parser = Tag("ID")
+        self.parser = IdOrObjectName()
         if signed:
             self.parser = Concat(Opt(Symbol('-')), self.parser)
         self.signed = signed
@@ -79,13 +101,16 @@ class Identifier(Parser):
         parsed = self.parser.process(tokens)
         neg = False
         if isinstance(parsed, list):
-            value = parsed[1]
+            name = parsed[1]
             if parsed[0] == '-':
                 neg = True
         else:
-            value = parsed
+            name = parsed
 
-        return ast.ID(value, neg=neg)
+        if isinstance(name, tuple):
+            name = ".".join(name)
+
+        return ast.ID(name, neg=neg)
 
     def repr(self, seen=None):
         """Return the parser's representation as a string."""

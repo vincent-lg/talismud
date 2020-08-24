@@ -48,7 +48,6 @@ class TypeChecker:
 
     def __init__(self, script):
         self.script = script
-        self.variables = {}
 
     def check(self, ast):
         """

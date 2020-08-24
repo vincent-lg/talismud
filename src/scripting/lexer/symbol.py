@@ -32,7 +32,7 @@
 from scripting.lexer.abc import Token
 
 SYMBOLS = ("=", "(", ")", "+", "-", "*", "/", ",",
-        "<=", "<", ">=", ">", "\n", "!=", "==", ":",
+        "<=", "<", ">=", ">", "\n", "!=", "==", ":", ".",
 )
 # Order by length of expected symbols
 SYMBOLS = tuple(sorted(SYMBOLS, key=lambda p: len(p), reverse=True))

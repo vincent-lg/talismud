@@ -60,8 +60,9 @@ class FunctionCall(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        function = getattr(checker.script.top_level, self.name, None)
-        if function is None:
+        try:
+            function = checker.script.get_variable_or_attribute(self.name)
+        except KeyError:
             self.raise_type_error(f"The function {self.name!r} can't be found")
 
         # Inspect the function argument
@@ -110,7 +111,7 @@ class FunctionCall(BaseAST):
             script (script.Script): the script object.
 
         """
-        function = getattr(script.top_level, self.name)
+        function = script.get_variable_or_attribute(self.name)
         script.add_expression("CONST", function)
         if (arguments := self.arguments):
             for argument in arguments:

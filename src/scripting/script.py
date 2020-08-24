@@ -54,7 +54,7 @@ To see a simple REPL console, look at `repl.py`.
 """
 
 from queue import Empty, LifoQueue
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from scripting.assembly.abc import EXPRESSIONS
 from scripting.assembly.exceptions import MoveCursor
@@ -63,7 +63,7 @@ from scripting.exceptions import NeedMore
 from scripting.lexer.abc import Token
 from scripting.lexer.perform import create_tokens
 from scripting.parser.perform import parse_tokens
-from scripting.representation import REPRESENTATIONS
+from scripting.namespace import BaseNamespace, TopLevel
 from scripting.typechecker.checker import TypeChecker
 
 class Script:
@@ -150,12 +150,9 @@ class Script:
         self.assembly = []
 
         # Assembly-specific data
+        self.top_level = TopLevel(self)
         self.stack = LifoQueue()
-        self.variables = {}
         self.cursor = 0
-
-        # Top-level object representations
-        self.top_level = REPRESENTATIONS[None](self)
 
     def add_tokens(self, to_add: str):
         """
@@ -371,10 +368,11 @@ class Script:
         and restore the program from it (see `restore`).
 
         """
+        stack = self.stack
         while self.cursor < len(self.assembly):
             exp_class, args = self.assembly[self.cursor]
             try:
-                exp_class.process(self.stack, self.variables, *args)
+                exp_class.process(self, stack, *args)
             except MoveCursor as exc:
                 self.cursor = exc.cursor
             else:
@@ -391,6 +389,83 @@ class Script:
         self.ast = None
         self.assembly = []
         self.cursor = 0
+
+    def get_variable_or_attribute(self, name: str):
+        """
+        Return the attribute or variable with this name.
+
+        Args:
+            name (str): a name, with the usual notation (a.b.c).
+
+        Returns:
+            value (Any): the value, of any type, if successful.
+
+        Raises:
+            KeyError: the name cannot be found.
+
+        """
+        split = name.split(".")
+        value = self.top_level.attributes[split[0]]
+        for sub_name in split[1:]:
+            if isinstance(value, BaseNamespace):
+                value = value.attributes[sub_name]
+            else:
+                value = getattr(value, sub_name)
+
+        return value
+
+    def set_variable_or_attribute(self, name: str, value: Any):
+        """
+        Change the attribute or variable's value.
+
+        Args:
+            name (str): a name, with the usual notation (a.b.c).
+
+        Raises:
+            KeyError: the name cannot be found.
+
+        """
+        split = name.split(".")
+        if len(split) > 1:
+            obj = self.top_level.attributes[split[0]]
+            sub_name = split[-1]
+        else:
+            obj = self.top_level
+            sub_name = name
+
+        for sub_name in split[1:-1]:
+            if isinstance(obj, BaseNamespace):
+                obj = obj.attributes[sub_name]
+            else:
+                obj = getattr(obj, sub_name)
+
+        if isinstance(obj, BaseNamespace):
+            obj.attributes[sub_name] = value
+        else:
+            setattr(obj, sub_name, value)
+
+    def restore_top_level(self, top_level: TopLevel):
+        """
+        Restore the top-level namespace, from another script.
+
+        This is mostly used for debugging purposes, where
+        several script objects are created but variables
+        should be carried from one to the other.
+
+        Args:
+            top_level (TopLevel): the top-level namespace.
+
+        """
+        self.top_level = top_level
+        queue = LifoQueue()
+        queue.put(top_level, block=False)
+
+        while not queue.empty():
+            namespace = queue.get(block=False)
+            namespace.script = self
+            for value in namespace.attributes.values():
+                if isinstance(value, BaseNamespace):
+                    queue.put(value, block=False)
 
     @classmethod
     def generate_tokens(cls, instructions: str):

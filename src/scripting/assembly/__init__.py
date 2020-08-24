@@ -29,7 +29,7 @@
 
 """With a well-formed AST, it's time to flatten the tree.
 
-The assembly is a comprehensive representation of the AST, a flattened
+The assembly chain is a comprehensive representation of the AST, a flattened
 version with low-level calls.  Due do its form, it can be interrupted
 and scheduled to start again later.  It is not optimized for speed
 and will not perform faster than if the AST had the entire

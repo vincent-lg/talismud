@@ -27,37 +27,35 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""LE assembly expression, to compare two values equal or lower than."""
+"""Top-level namespace.
 
-from scripting.assembly.abc import BaseExpression
+This namespace is looked up when the scripting doesn't
+act on an object itself.  For instance, if the scripting calls
+a top-level function:
 
-class Le(BaseExpression):
+    variable = add(2, 4)
 
-    """
-    LE assembly expression.
+In this context, the `add` function is a top-level function,
+defined as a method on the TopLevel namespace.
 
-    Args:
-        None.
+"""
 
-    This expression's only role is to compare <= two values from the
-    stack.  It pops these two values, compares them equal or
-    lower than equal and pushes the result back onto the stack,
-    as a boolean.
+from data.character import VariableFormatter
+from scripting.namespace.abc import BaseNamespace
+from scripting.namespace.debug import Debug
 
-    """
+class TopLevel(BaseNamespace):
 
-    name = "LE"
+    """Top-level namespace."""
 
-    @classmethod
-    def process(cls, script, stack):
-        """
-        Process this expression.
+    def __init__(self, script):
+        super().__init__(script)
+        self.attributes = {
+                "__debug": Debug(script),
+                "print": self.print,
+        }
 
-        Args:
-            script (Script): the script object.
-            stak (LifoQueue): the stack.
-
-        """
-        value2 = stack.get(block=False)
-        value1 = stack.get(block=False)
-        stack.put(value1 <= value2, block=False)
+    def print(self, string: str):
+        """Print a string."""
+        formatter = VariableFormatter(None, self.script.variables)
+        print(formatter.format(string))

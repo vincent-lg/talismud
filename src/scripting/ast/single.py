@@ -120,7 +120,13 @@ class ID(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        var_type = checker.variables.get(self.name)
+        try:
+            value = checker.script.get_variable_or_attribute(self.name)
+        except KeyError:
+            var_type = None
+        else:
+            var_type = type(value)
+
         if var_type is None:
             self.raise_type_error(
                     f"The variable {self.name!r} has not been set."

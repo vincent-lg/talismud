@@ -27,37 +27,30 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""LE assembly expression, to compare two values equal or lower than."""
+"""Abstract namespace in the scripting.
 
-from scripting.assembly.abc import BaseExpression
+A namespace in the scripting is much like a namespace in
+Python.  It contains both attributes and calalbles which can
+be accessed or called.  Its only purpose is to organize
+scripts and avoid having everything in the same namespace.
 
-class Le(BaseExpression):
+"""
 
-    """
-    LE assembly expression.
+from abc import ABCMeta, abstractmethod
 
-    Args:
-        None.
+REPRESENTATIONS = {}
 
-    This expression's only role is to compare <= two values from the
-    stack.  It pops these two values, compares them equal or
-    lower than equal and pushes the result back onto the stack,
-    as a boolean.
+class BaseNamespace(metaclass=ABCMeta):
 
     """
+    Abstract class for a namespace in the scripting.
 
-    name = "LE"
+    Namespaces simply allow access to attributes, which can
+    be data of various types, including other
+    other namespaces and callables.
 
-    @classmethod
-    def process(cls, script, stack):
-        """
-        Process this expression.
+    """
 
-        Args:
-            script (Script): the script object.
-            stak (LifoQueue): the stack.
-
-        """
-        value2 = stack.get(block=False)
-        value1 = stack.get(block=False)
-        stack.put(value1 <= value2, block=False)
+    def __init__(self, script):
+        self.script = script
+        self.attributes = {}

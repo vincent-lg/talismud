@@ -70,13 +70,13 @@ class BaseExpression(metaclass=ExpressionMeta):
 
     @classmethod
     @abstractmethod
-    def process(cls, stack, variables):
+    def process(cls, script, stack):
         """
         Process this expression.
 
         Args:
+            script (Script): the script object.
             stack (LifoQueue): the current stack.
-            variables (dict): the script variables.
             Other arguments might be expected by other expressions.
 
         """

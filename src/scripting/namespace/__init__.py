@@ -27,37 +27,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""LE assembly expression, to compare two values equal or lower than."""
+"""Namespaces in the scripting variables."""
 
-from scripting.assembly.abc import BaseExpression
-
-class Le(BaseExpression):
-
-    """
-    LE assembly expression.
-
-    Args:
-        None.
-
-    This expression's only role is to compare <= two values from the
-    stack.  It pops these two values, compares them equal or
-    lower than equal and pushes the result back onto the stack,
-    as a boolean.
-
-    """
-
-    name = "LE"
-
-    @classmethod
-    def process(cls, script, stack):
-        """
-        Process this expression.
-
-        Args:
-            script (Script): the script object.
-            stak (LifoQueue): the stack.
-
-        """
-        value2 = stack.get(block=False)
-        value1 = stack.get(block=False)
-        stack.put(value1 <= value2, block=False)
+from scripting.namespace.abc import BaseNamespace
+from scripting.namespace.debug import Debug
+from scripting.namespace.top_level import TopLevel

@@ -47,15 +47,15 @@ class Store(BaseExpression):
     name = "STORE"
 
     @classmethod
-    def process(cls, stack, variables, name):
+    def process(cls, script, stack, name):
         """
         Process this expression.
 
         Args:
+            script (Script): the script object.
             stack (LifoQueue): the current stack.
-            variables (dict): the script variables.
             name (str): the variable name.
 
         """
         value = stack.get(block=False)
-        variables[name] = value
+        script.set_variable_or_attribute(name, value)

@@ -49,13 +49,13 @@ class IfTrue(BaseExpression):
     name = "IFTRUE"
 
     @classmethod
-    def process(cls, stack, variables, cursor, pop=True):
+    def process(cls, script, stack, cursor, pop=True):
         """
         Process this expression.
 
         Args:
+            script (Script): the script object.
             stack (LifoQueue): the current stack.
-            variables (dict): the script variables.
             cursor (int): the new cursor.
             pop (bool, optional): should the boolean be popped?
 

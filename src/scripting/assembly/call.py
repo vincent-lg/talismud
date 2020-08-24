@@ -49,13 +49,13 @@ class Call(BaseExpression):
     name = "CALL"
 
     @classmethod
-    def process(cls, stack, variables, nargs):
+    def process(cls, script, stack, nargs):
         """
         Process this expression.
 
         Args:
+            script (Script): the script object.
             stack (LifoQueue): the current stack.
-            variables (dict): the script variables.
             nargs (int): the number of arguments to pop from the stack.
 
         """

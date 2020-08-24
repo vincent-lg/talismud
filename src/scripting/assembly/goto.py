@@ -47,13 +47,14 @@ class Goto(BaseExpression):
     name = "GOTO"
 
     @classmethod
-    def process(cls, stack, variables, cursor):
+    def process(cls, script, stack, cursor):
         """
         Process this expression.
 
         Args:
+            script (Script): the script object.
             stack (LifoQueue): the current stack.
-            variables (dict): the script variables.
+            cursor (int): the line to jump to.
 
         """
         raise MoveCursor(cursor)

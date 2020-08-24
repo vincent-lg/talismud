@@ -51,7 +51,7 @@ class TopLevel(BaseRepresentation):
 
     name = "top-level"
     represent = None
-    attributes = ()
+    attributes = {}
 
     def two(self) -> int:
         return 2

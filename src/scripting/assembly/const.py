@@ -47,13 +47,13 @@ class Const(BaseExpression):
     name = "CONST"
 
     @classmethod
-    def process(cls, stack, variables, value):
+    def process(cls, script, stack, value):
         """
         Process this expression.
 
         Args:
+            script (Script): the script object.
             stack (LifoQueue): the current stack.
-            variables (dict): the script variables.
             value (any): the value to be pushed onto the stack.
 
         """

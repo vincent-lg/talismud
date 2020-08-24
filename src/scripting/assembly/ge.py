@@ -49,13 +49,13 @@ class Ge(BaseExpression):
     name = "GE"
 
     @classmethod
-    def process(cls, stack, variables):
+    def process(cls, script, stack):
         """
         Process this expression.
 
         Args:
+            script (Script): the script object.
             stack (LifoQueue): the current stack.
-            variables (dict): the script variables.
 
         """
         value2 = stack.get(block=False)
