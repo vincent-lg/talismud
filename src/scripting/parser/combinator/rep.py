@@ -39,18 +39,18 @@ class Rep(Parser):
     def __init__(self, parser):
         self.parser = parser
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Let the parser try to process the following token."""
         results = []
         try:
-            result = self.parser.process(tokens)
+            result = await self.parser.process(tokens)
         except (ParseError, NoMoreToken):
             return []
 
         while True:
             results.append(result)
             try:
-                result = self.parser.process(tokens)
+                result = await self.parser.process(tokens)
             except (ParseError, NoMoreToken):
                 break
 

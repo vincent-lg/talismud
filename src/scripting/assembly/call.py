@@ -49,7 +49,7 @@ class Call(BaseExpression):
     name = "CALL"
 
     @classmethod
-    def process(cls, script, stack, nargs):
+    async def process(cls, script, stack, nargs):
         """
         Process this expression.
 
@@ -64,5 +64,5 @@ class Call(BaseExpression):
             args.insert(0, stack.get(block=False))
 
         function = stack.get(block=False)
-        res = function(*args)
+        res = await function(*args)
         stack.put(res, block=False)

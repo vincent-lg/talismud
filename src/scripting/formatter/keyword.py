@@ -38,7 +38,7 @@ class Keyword(BaseFormatter):
     name = "keyword"
 
     @classmethod
-    def format(cls, token, previous):
+    async def format(cls, token, previous):
         """
         Format the given token.
 

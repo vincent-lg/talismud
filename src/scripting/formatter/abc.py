@@ -64,7 +64,7 @@ class BaseFormatter(metaclass=FormatterMeta):
 
     @classmethod
     @abstractmethod
-    def format(cls, token, previous):
+    async def format(cls, token, previous):
         """
         Format the given token.
 

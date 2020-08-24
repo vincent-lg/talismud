@@ -46,9 +46,9 @@ class Program(Phrase):
     def __init__(self):
         self.parser = Rep(Newline()) + StmtList() + Opt(Newline())
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the tokens."""
-        parsed = self.parser.process(tokens)
+        parsed = await self.parser.process(tokens)
         return parsed[0][1]
 
     def repr(self, seen=None):
@@ -106,9 +106,9 @@ class AssignStmt(Concat):
     def __init__(self):
         super().__init__(Identifier(), Symbol('='), ArExp())
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the given tokens."""
-        parsed = super().process(tokens)
+        parsed = await super().process(tokens)
         var, _, exp = parsed
         return AssignmentStatement(var.name, exp)
 
@@ -137,14 +137,15 @@ class IfStmt(Concat):
                 Lazy(StmtList), Opt(Newline() + Keyword('else') + Newline() +
                 Lazy(StmtList)), Newline(), Keyword('end'))
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the tokens."""
-        parsed = super().process(tokens)
+        parsed = await super().process(tokens)
         _, condition, _, _, true_stmt, false_parsed, _, _ = parsed
         if false_parsed:
             (_, false_stmt) = false_parsed
         else:
             false_stmt = None
+
         return IfStatement(condition, true_stmt, false_stmt)
 
 
@@ -168,8 +169,8 @@ class WhileStmt(Concat):
         super().__init__(Keyword('while'), BoolExp(), Symbol('-'),
                 Newline(), Lazy(StmtList), Newline(), Keyword('end'))
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the given tokens."""
-        parsed = super().process(tokens)
+        parsed = await super().process(tokens)
         _, condition, _, _, body, _, _ = parsed
         return WhileStatement(condition, body)

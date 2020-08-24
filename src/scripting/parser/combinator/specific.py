@@ -39,7 +39,7 @@ class Specific(Parser):
         self.value = value
         self.tag = tag
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Let the parser try to process the following token."""
         token = tokens.next
         if token.matched == self.value and token.tag == self.tag:

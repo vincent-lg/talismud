@@ -52,7 +52,7 @@ class RelopBoolExp(BaseAST):
     def __repr__(self):
         return f"RelopBexp({self.op}, {self.left}, {self.right})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -67,13 +67,13 @@ class RelopBoolExp(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        left_type = self.left.check_types(checker)
-        right_type = self.right.check_types(checker)
+        left_type = await self.left.check_types(checker)
+        right_type = await self.right.check_types(checker)
         self.check_issubclass(left_type, (int, float))
         self.check_issubclass(right_type, (int, float))
         return bool
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -90,15 +90,17 @@ class RelopBoolExp(BaseAST):
 
         """
         name = OP_NAMES[self.op]
-        self.left.compute(script)
+        await self.left.compute(script)
         to_update = []
         if isinstance(self.left, RelopBoolExp):
             to_update.append(script.add_expression("IFFALSE", None, False))
-            self.left.right.compute(script)
-        self.right.compute(script)
+            await self.left.right.compute(script)
+
+        await self.right.compute(script)
         if isinstance(self.right, RelopBoolExp):
             to_update.append(script.add_expression("IFFALSE", None, False))
-            self.right.right.compute(script)
+            await self.right.right.compute(script)
+
         script.add_expression(name)
         for line in to_update:
             script.update_expression(line, "IFFALSE", script.next_line, False)
@@ -115,7 +117,7 @@ class AndBoolExp(BaseAST):
     def __repr__(self):
         return f"AndBexp({self.left}, {self.right})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -130,13 +132,13 @@ class AndBoolExp(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        left_type = self.left.check_types(checker)
-        right_type = self.right.check_types(checker)
+        left_type = await self.left.check_types(checker)
+        right_type = await self.right.check_types(checker)
         self.check_issubclass(left_type, bool)
         self.check_issubclass(right_type, bool)
         return bool
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -152,9 +154,9 @@ class AndBoolExp(BaseAST):
             script (script.Script): the script object.
 
         """
-        self.left.compute(script)
+        await self.left.compute(script)
         line = script.add_expression("IFFALSE", None, False)
-        self.right.compute(script)
+        await self.right.compute(script)
         new_line = script.next_line
         script.update_expression(line, "IFFALSE", new_line, False)
 
@@ -170,7 +172,7 @@ class OrBoolExp(BaseAST):
     def __repr__(self):
         return f"OrBexp({self.left}, {self.right})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -185,13 +187,13 @@ class OrBoolExp(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        left_type = self.left.check_types(checker)
-        right_type = self.right.check_types(checker)
+        left_type = await self.left.check_types(checker)
+        right_type = await self.right.check_types(checker)
         self.check_issubclass(left_type, bool)
         self.check_issubclass(right_type, bool)
         return bool
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -207,9 +209,9 @@ class OrBoolExp(BaseAST):
             script (script.Script): the script object.
 
         """
-        self.left.compute(script)
+        await self.left.compute(script)
         line = script.add_expression("IFTRUE", None, False)
-        self.right.compute(script)
+        await self.right.compute(script)
         new_line = script.next_line
         script.update_expression(line, "IFTRUE", new_line, False)
 
@@ -224,7 +226,7 @@ class NotBoolExp(BaseAST):
     def __repr__(self):
         return f"NotBexp({self.exp})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -239,11 +241,11 @@ class NotBoolExp(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        exp_type = self.exp.check_types(checker)
+        exp_type = await self.exp.check_types(checker)
         self.check_issubclass(exp_type, bool)
         return bool
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -259,5 +261,5 @@ class NotBoolExp(BaseAST):
             script (script.Script): the script object.
 
         """
-        self.exp.compute(script)
+        await self.exp.compute(script)
         script.add_expression("NOT")

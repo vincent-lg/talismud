@@ -34,7 +34,7 @@ from scripting.parser.arithmetic import FullExpression
 from scripting.parser.statement import Program
 from scripting.parser.stream import TokenStream
 
-def parse_tokens(tokens):
+async def parse_tokens(tokens):
     """
     Try to parse the given tokens.
 
@@ -47,10 +47,10 @@ def parse_tokens(tokens):
     while not stream.empty():
         try:
             with stream:
-                ast = FullExpression().process(stream)
+                ast = await FullExpression().process(stream)
         except ParseError:
             stream = TokenStream(tokens)
             with stream:
-                ast = Program().process(stream)
+                ast = await Program().process(stream)
 
     return ast

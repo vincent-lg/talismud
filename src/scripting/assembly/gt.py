@@ -49,7 +49,7 @@ class Gt(BaseExpression):
     name = "GT"
 
     @classmethod
-    def process(cls, script, stack):
+    async def process(cls, script, stack):
         """
         Process this expression.
 

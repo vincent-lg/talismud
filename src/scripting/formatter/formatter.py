@@ -48,7 +48,7 @@ class Formatter:
     def __init__(self, tokens):
         self.tokens = iter(tokens)
 
-    def format(self) -> str:
+    async def format(self) -> str:
         """
         Format the program.
 
@@ -57,11 +57,11 @@ class Formatter:
 
         """
         lines = []
-        while (line := self.read_next_line()):
+        while (line := await self.read_next_line()):
             lines.append(line)
         return "\n".join(lines)
 
-    def read_next_line(self):
+    async def read_next_line(self):
         """Read the next line of token, formatting it."""
         line = ""
         previous = None
@@ -71,7 +71,7 @@ class Formatter:
                 to_add = token.matched
             else:
                 try:
-                    if (to_add := formatter.format(token, previous)):
+                    if (to_add := await formatter.format(token, previous)):
                         previous = token
                 except NewLineFormat:
                     break

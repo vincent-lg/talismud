@@ -56,9 +56,9 @@ class FuncCall(Concat):
         super().__init__(Opt(Symbol('-')) + Identifier() +
                 Symbol('(') + Opt(Argument()) + Symbol(')'))
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the function call."""
-        result = super().process(tokens)
+        result = await super().process(tokens)
         (((((sign, var), _), arguments), _), ) = result
         if arguments and not isinstance(arguments, list):
             arguments = [arguments]

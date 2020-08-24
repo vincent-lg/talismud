@@ -48,7 +48,7 @@ class Sub(BaseExpression):
     name = "SUB"
 
     @classmethod
-    def process(cls, script, stack):
+    async def process(cls, script, stack):
         """
         Process this expression.
 

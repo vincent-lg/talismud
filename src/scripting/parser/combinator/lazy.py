@@ -39,10 +39,10 @@ class Lazy(Parser):
         self.parser = None
         self.parser_func = parser_func
 
-    def process(self, tokens):
+    async def process(self, tokens):
         if not self.parser:
             self.parser = self.parser_func()
-        return self.parser.process(tokens)
+        return await self.parser.process(tokens)
 
     def repr(self, seen=None):
         """Return the parser's representation as a string."""

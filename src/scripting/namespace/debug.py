@@ -49,6 +49,6 @@ class Debug(BaseNamespace):
                 "show_variables": self.show_variables,
         }
 
-    def show_variables(self):
+    async def show_variables(self):
         """Show the top-level variables."""
         print(self.script.top_level.attributes)

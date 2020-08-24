@@ -45,13 +45,13 @@ class Concat(Parser):
     def __init__(self, *parsers):
         self.parsers = parsers
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Let the parser try to process the following token."""
         cursor = tokens.cursor
         results = []
         for parser in self.parsers:
             try:
-                result = parser.process(tokens)
+                result = await parser.process(tokens)
             except (ParseError, NoMoreToken):
                 tokens.cursor = cursor
                 tokens.parse_error(f"Cannot parse {self.parsers!r}")

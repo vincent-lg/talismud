@@ -54,7 +54,7 @@ class BaseAST(metaclass=ABCMeta):
         return type(self).__name__
 
     @abstractmethod
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -73,7 +73,7 @@ class BaseAST(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 

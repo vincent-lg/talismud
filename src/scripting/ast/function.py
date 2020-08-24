@@ -45,7 +45,7 @@ class FunctionCall(BaseAST):
         args = ", ".join([repr(argument) for argument in self.arguments])
         return f"FunctionCall({self.name}({args}))"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -72,7 +72,7 @@ class FunctionCall(BaseAST):
         parameters = {}
         for i, (arg, parameter) in enumerate(
                 zip(self.arguments, sig.parameters.values())):
-            arg_type = arg.check_types(checker)
+            arg_type = await arg.check_types(checker)
             self.check_issubclass(arg_type, parameter.annotation,
                     f"function {self.name!r}, argument {i} "
                     f"({parameter.name}): expected {{expected_types}}, "
@@ -95,7 +95,7 @@ class FunctionCall(BaseAST):
         # Return the function's return annotation
         return sig.return_annotation
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -115,6 +115,6 @@ class FunctionCall(BaseAST):
         script.add_expression("CONST", function)
         if (arguments := self.arguments):
             for argument in arguments:
-                argument.compute(script)
+                await argument.compute(script)
 
         script.add_expression("CALL", len(self.arguments))

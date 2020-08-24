@@ -39,11 +39,11 @@ class Opt(Parser):
     def __init__(self, parser):
         self.parser = parser
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Let the parser try to process the following token."""
         cursor = tokens.cursor
         try:
-            result = self.parser.process(tokens)
+            result = await self.parser.process(tokens)
         except (ParseError, NoMoreToken, NeedMore):
             result = None
 

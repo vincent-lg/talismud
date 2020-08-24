@@ -74,9 +74,9 @@ class BoolExp(Parser):
         for op, ast in BOOL_CONNECTORS[1:]:
             self.parser = BoolConnector(self.parser, op, ast)
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the given tokens."""
-        return self.parser.process(tokens)
+        return await self.parser.process(tokens)
 
     def repr(self, seen=None):
         """Return the parser's representation as a string."""
@@ -106,9 +106,9 @@ class BoolExpNot(Concat):
     def __init__(self):
         super().__init__(Keyword("not"), Lazy(BoolExpTerm))
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the given tokens."""
-        parsed = super().process(tokens)
+        parsed = await super().process(tokens)
         return boolean.NotBoolExp(parsed[1])
 
 
@@ -136,9 +136,9 @@ class BoolExpRelop(Parser):
         for op in BOOL_OPERATORS[1:]:
             self.parser = BoolBinOp(self.parser, op)
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the given tokens."""
-        return self.parser.process(tokens)
+        return await self.parser.process(tokens)
 
     def repr(self, seen=None):
         """Return the parser's representation as a string."""
@@ -152,7 +152,7 @@ class BoolExpGroup(Concat):
     def __init__(self):
         super().__init__(Symbol('('), Lazy(BoolExp), Symbol(')'))
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the given tokens."""
-        parsed = super().process(tokens)
+        parsed = await super().process(tokens)
         return parsed[0][1]

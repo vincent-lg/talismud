@@ -70,7 +70,7 @@ class BaseExpression(metaclass=ExpressionMeta):
 
     @classmethod
     @abstractmethod
-    def process(cls, script, stack):
+    async def process(cls, script, stack):
         """
         Process this expression.
 

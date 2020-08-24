@@ -48,7 +48,7 @@ class Eq(BaseExpression):
     name = "EQ"
 
     @classmethod
-    def process(cls, script, stack):
+    async def process(cls, script, stack):
         """
         Process this expression.
 

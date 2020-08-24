@@ -48,7 +48,7 @@ class Mul(BaseExpression):
     name = "MUL"
 
     @classmethod
-    def process(cls, script, stack):
+    async def process(cls, script, stack):
         """
         Process this expression.
 

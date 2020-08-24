@@ -76,9 +76,9 @@ class ArExp(Parser):
         for op, ast in AR_OPERATORS[1:]:
             self.parser = ArBinOp(self.parser, op, ast)
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the given tokens."""
-        return self.parser.process(tokens)
+        return await self.parser.process(tokens)
 
     def repr(self, seen=None):
         """Return the parser's representation as a string."""
@@ -118,9 +118,9 @@ class ArExpGroup(Parser):
                 Opt(Symbol("-")) + Symbol('(') + Lazy(ArExp) + Symbol(')')
         )
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Try to process the expression."""
-        result = self.parser.process(tokens)
+        result = await self.parser.process(tokens)
         (((sign, _), p), _) = result
         if sign == '-':
             p.neg = True

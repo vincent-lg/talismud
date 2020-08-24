@@ -42,7 +42,7 @@ class AssignmentStatement(BaseAST):
     def __repr__(self):
         return f"AssignStatement({self.name} = {self.exp})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -57,10 +57,9 @@ class AssignmentStatement(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        exp_type = self.exp.check_types(checker)
-        checker.variables[self.name] = exp_type
+        exp_type = await self.exp.check_types(checker)
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -76,7 +75,7 @@ class AssignmentStatement(BaseAST):
             script (script.Script): the script object.
 
         """
-        self.exp.compute(script)
+        await self.exp.compute(script)
         script.add_expression("STORE", self.name)
 
 
@@ -91,7 +90,7 @@ class CompoundStatement(BaseAST):
     def __repr__(self):
         return f"CompoundStatement({self.first}, {self.second})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -106,10 +105,10 @@ class CompoundStatement(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        self.first.check_types(checker)
-        self.second.check_types(checker)
+        await self.first.check_types(checker)
+        await self.second.check_types(checker)
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -125,8 +124,8 @@ class CompoundStatement(BaseAST):
             script (script.Script): the script object.
 
         """
-        self.first.compute(script)
-        self.second.compute(script)
+        await self.first.compute(script)
+        await self.second.compute(script)
 
 
 class IfStatement(BaseAST):
@@ -141,7 +140,7 @@ class IfStatement(BaseAST):
     def __repr__(self):
         return f"IfStatement({self.condition}, {self.true_stmt}, {self.false_stmt})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -156,12 +155,12 @@ class IfStatement(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        self.condition.check_types(checker)
-        self.true_stmt.check_types(checker)
+        await self.condition.check_types(checker)
+        await self.true_stmt.check_types(checker)
         if self.false_stmt is not None:
-            self.false_stmt.check_types(checker)
+            await self.false_stmt.check_types(checker)
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -177,15 +176,15 @@ class IfStatement(BaseAST):
             script (script.Script): the script object.
 
         """
-        self.condition.compute(script)
+        await self.condition.compute(script)
         after_condition = script.add_expression("IFFALSE", None)
-        self.true_stmt.compute(script)
+        await self.true_stmt.compute(script)
 
         if self.false_stmt:
             end_true = script.add_expression("GOTO", None)
             false_line = script.next_line
             script.update_expression(after_condition, "IFFALSE", false_line)
-            self.false_stmt.compute(script)
+            await self.false_stmt.compute(script)
             script.update_expression(end_true, "GOTO", script.next_line)
         else:
             script.update_expression(after_condition, "IFFALSE", script.next_line)
@@ -202,7 +201,7 @@ class WhileStatement(BaseAST):
     def __repr__(self):
         return f"WhileStatement({self.condition}, {self.body})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -217,10 +216,10 @@ class WhileStatement(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        self.condition.check_types(checker)
-        self.body.check_types(checker)
+        await self.condition.check_types(checker)
+        await self.body.check_types(checker)
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -237,9 +236,9 @@ class WhileStatement(BaseAST):
 
         """
         before = script.next_line
-        self.condition.compute(script)
+        await self.condition.compute(script)
         line = script.add_expression("IFFALSE", None)
-        self.body.compute(script)
+        await self.body.compute(script)
         script.add_expression("GOTO", before)
         new_line = script.next_line
         script.update_expression(line, "IFFALSE", new_line)

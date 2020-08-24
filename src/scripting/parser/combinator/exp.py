@@ -47,14 +47,14 @@ class Exp(Parser):
         self.parser = parser
         self.separator = separator
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Let the parser try to process the following token."""
-        result = self.parser.process(tokens)
+        result = await self.parser.process(tokens)
         next_parser = self.separator + self.parser
 
         while True:
             try:
-                next_result = next_parser.process(tokens)
+                next_result = await next_parser.process(tokens)
             except (ParseError, NoMoreToken, NeedMore):
                 break
             else:

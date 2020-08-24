@@ -51,9 +51,9 @@ class Process(Parser):
         self.parser = parser
         self.function = function
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Let the parser try to process the following token."""
-        result = self.parser.process(tokens)
+        result = await self.parser.process(tokens)
         return self.function(result)
 
     def repr(self, seen=None):

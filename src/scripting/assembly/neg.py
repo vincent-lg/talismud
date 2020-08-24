@@ -48,7 +48,7 @@ class Neg(BaseExpression):
     name = "NEG"
 
     @classmethod
-    def process(cls, script, stack):
+    async def process(cls, script, stack):
         """
         Process this expression.
 

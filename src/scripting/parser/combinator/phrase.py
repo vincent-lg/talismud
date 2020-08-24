@@ -46,9 +46,9 @@ class Phrase(Parser):
     def __init__(self, parser):
         self.parser = parser
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the given tokens."""
-        result = self.parser.process(tokens)
+        result = await self.parser.process(tokens)
 
         if tokens.empty(check_cursor=True):
             return result

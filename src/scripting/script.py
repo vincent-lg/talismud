@@ -171,7 +171,7 @@ class Script:
         tokens = create_tokens(to_add)
         self.tokens += tokens
 
-    def generate_AST(self) -> bool:
+    async def generate_AST(self) -> bool:
         """
         Generate the Abstract Syntax Tree from the tokens.
 
@@ -191,7 +191,7 @@ class Script:
 
         """
         try:
-            ast = parse_tokens(self.tokens)
+            ast = await parse_tokens(self.tokens)
         except NeedMore:
             # That's a script, but it's not finished yet, so allow a new line
             self.tokens += create_tokens("\n")
@@ -200,7 +200,7 @@ class Script:
         self.ast = ast
         return True
 
-    def check_types(self):
+    async def check_types(self):
         """
         Check types, through the type checker.
 
@@ -217,9 +217,9 @@ class Script:
         """
         assert self.type_checker, "no type checker has been set"
         assert self.ast, "the AST hasn't been set yet"
-        self.type_checker.check(self.ast)
+        await self.type_checker.check(self.ast)
 
-    def generate_assembly(self):
+    async def generate_assembly(self):
         """
         Generate the assembly chain, using the Abstract Syntax Tree.
 
@@ -233,7 +233,7 @@ class Script:
 
         """
         assert self.ast, "the Abstract Syntax Tree doesn't exist"
-        self.ast.compute(self)
+        await self.ast.compute(self)
 
     def format_assembly(self, individual_lines: bool = False):
         """
@@ -355,7 +355,7 @@ class Script:
         self.assembly[line] = (exp_class, args)
         return line
 
-    def execute(self):
+    async def execute(self):
         """
         Start the slow execution of this script.
 
@@ -372,7 +372,7 @@ class Script:
         while self.cursor < len(self.assembly):
             exp_class, args = self.assembly[self.cursor]
             try:
-                exp_class.process(self, stack, *args)
+                await exp_class.process(self, stack, *args)
             except MoveCursor as exc:
                 self.cursor = exc.cursor
             else:

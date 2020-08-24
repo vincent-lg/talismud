@@ -47,7 +47,7 @@ class Goto(BaseExpression):
     name = "GOTO"
 
     @classmethod
-    def process(cls, script, stack, cursor):
+    async def process(cls, script, stack, cursor):
         """
         Process this expression.
 

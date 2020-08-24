@@ -38,7 +38,7 @@ class Separator(BaseFormatter):
     name = "separator"
 
     @classmethod
-    def format(cls, token, previous):
+    async def format(cls, token, previous):
         """
         Format the given token.
 

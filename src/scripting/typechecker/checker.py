@@ -49,7 +49,7 @@ class TypeChecker:
     def __init__(self, script):
         self.script = script
 
-    def check(self, ast):
+    async def check(self, ast):
         """
         Check the abstract syntax tree's types.
 
@@ -65,4 +65,4 @@ class TypeChecker:
             itself through the `check_types` method.
 
         """
-        ast.check_types(self)
+        await ast.check_types(self)

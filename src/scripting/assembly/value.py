@@ -48,7 +48,7 @@ class Value(BaseExpression):
     name = "VALUE"
 
     @classmethod
-    def process(cls, script, stack, name):
+    async def process(cls, script, stack, name):
         """
         Process this expression.
 

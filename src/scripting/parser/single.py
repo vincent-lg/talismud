@@ -50,9 +50,9 @@ class Floating(Tag):
     def __init__(self):
         super().__init__(tag="FLOAT")
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Let the parser try to process the following token."""
-        return ast.Float(float(super().process(tokens)))
+        return ast.Float(float(await super().process(tokens)))
 
 
 class IdOrObjectName(Exp):
@@ -96,9 +96,9 @@ class Identifier(Parser):
             self.parser = Concat(Opt(Symbol('-')), self.parser)
         self.signed = signed
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Let the parser try to process the following token."""
-        parsed = self.parser.process(tokens)
+        parsed = await self.parser.process(tokens)
         neg = False
         if isinstance(parsed, list):
             name = parsed[1]
@@ -124,9 +124,9 @@ class Integer(Tag):
     def __init__(self):
         super().__init__(tag="INT")
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Let the parser try to process the following token."""
-        return ast.Int(int(super().process(tokens)))
+        return ast.Int(int(await super().process(tokens)))
 
 
 class Newline(Parser):
@@ -136,14 +136,14 @@ class Newline(Parser):
     def __init__(self):
         self.parser = Symbol("\n") + Opt(Rep(Symbol("\n")))
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Process the separator, raising NeedMore if needed."""
         try:
             tokens.next
         except NoMoreToken:
             raise NeedMore from None
 
-        self.parser.process(tokens)
+        await self.parser.process(tokens)
 
     def repr(self, seen=None):
         """Return the parser's representation as a string."""
@@ -163,6 +163,6 @@ class String(Tag):
     def __init__(self):
         super().__init__(tag="STR")
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Let the parser try to process the following token."""
-        return ast.String(super().process(tokens))
+        return ast.String(await super().process(tokens))

@@ -44,7 +44,7 @@ class MulOp(BaseAST):
         sign = '-' if self.neg else ''
         return f"{sign}Mul({self.left}, {self.right})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -59,13 +59,13 @@ class MulOp(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        left_type = self.left.check_types(checker)
-        right_type = self.right.check_types(checker)
+        left_type = await self.left.check_types(checker)
+        right_type = await self.right.check_types(checker)
         self.check_issubclass(left_type, (int, float))
         self.check_issubclass(right_type, (int, float))
         return (int, float)
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -81,8 +81,8 @@ class MulOp(BaseAST):
             script (script.Script): the script object.
 
         """
-        self.left.compute(script)
-        self.right.compute(script)
+        await self.left.compute(script)
+        await self.right.compute(script)
         script.add_expression("MUL")
         if self.neg:
             script.add_expression("NEG")
@@ -101,7 +101,7 @@ class DivOp(BaseAST):
         sign = '-' if self.neg else ''
         return f"{sign}Div({self.left}, {self.right})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -116,13 +116,13 @@ class DivOp(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        left_type = self.left.check_types(checker)
-        right_type = self.right.check_types(checker)
+        left_type = await self.left.check_types(checker)
+        right_type = await self.right.check_types(checker)
         self.check_issubclass(left_type, (int, float))
         self.check_issubclass(right_type, (int, float))
         return (int, float)
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -138,8 +138,8 @@ class DivOp(BaseAST):
             script (script.Script): the script object.
 
         """
-        self.left.compute(script)
-        self.right.compute(script)
+        await self.left.compute(script)
+        await self.right.compute(script)
         script.add_expression("DIV")
         if self.neg:
             script.add_expression("NEG")
@@ -158,7 +158,7 @@ class AddOp(BaseAST):
         sign = '-' if self.neg else ''
         return f"{sign}Add({self.left}, {self.right})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -173,13 +173,13 @@ class AddOp(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        left_type = self.left.check_types(checker)
-        right_type = self.right.check_types(checker)
+        left_type = await self.left.check_types(checker)
+        right_type = await self.right.check_types(checker)
         self.check_issubclass(left_type, (int, float))
         self.check_issubclass(right_type, (int, float))
         return (int, float)
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -195,8 +195,8 @@ class AddOp(BaseAST):
             script (script.Script): the script object.
 
         """
-        self.left.compute(script)
-        self.right.compute(script)
+        await self.left.compute(script)
+        await self.right.compute(script)
         script.add_expression("ADD")
         if self.neg:
             script.add_expression("NEG")
@@ -215,7 +215,7 @@ class SubOp(BaseAST):
         sign = '-' if self.neg else ''
         return f"{sign}Sub({self.left}, {self.right})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -230,13 +230,13 @@ class SubOp(BaseAST):
             type (type, tuple or None): the relevant types of this AST.
 
         """
-        left_type = self.left.check_types(checker)
-        right_type = self.right.check_types(checker)
+        left_type = await self.left.check_types(checker)
+        right_type = await self.right.check_types(checker)
         self.check_issubclass(left_type, (int, float))
         self.check_issubclass(right_type, (int, float))
         return (int, float)
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -252,8 +252,8 @@ class SubOp(BaseAST):
             script (script.Script): the script object.
 
         """
-        self.left.compute(script)
-        self.right.compute(script)
+        await self.left.compute(script)
+        await self.right.compute(script)
         script.add_expression("SUB")
         if self.neg:
             script.add_expression("NEG")

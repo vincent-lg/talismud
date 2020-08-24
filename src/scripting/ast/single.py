@@ -58,7 +58,7 @@ class Float(BaseAST):
         if neg:
             self.num = -self.num
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -75,7 +75,7 @@ class Float(BaseAST):
         """
         return float
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -105,7 +105,7 @@ class ID(BaseAST):
     def __repr__(self):
         return f"{'-' if self.neg else ''}Var({self.name})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -134,7 +134,7 @@ class ID(BaseAST):
 
         return var_type
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -174,7 +174,7 @@ class Int(BaseAST):
         if neg:
             self.num = -self.num
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -191,7 +191,7 @@ class Int(BaseAST):
         """
         return int
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 
@@ -220,7 +220,7 @@ class String(BaseAST):
     def __repr__(self):
         return f"String({self.string})"
 
-    def check_types(self, checker):
+    async def check_types(self, checker):
         """
         Check the types of this AST element.
 
@@ -237,7 +237,7 @@ class String(BaseAST):
         """
         return str
 
-    def compute(self, script):
+    async def compute(self, script):
         """
         Add the assembly expressions necessary to compute this AST element.
 

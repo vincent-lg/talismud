@@ -38,7 +38,7 @@ class Tag(Parser):
     def __init__(self, tag):
         self.tag = tag
 
-    def process(self, tokens):
+    async def process(self, tokens):
         """Let the parser try to process the following token."""
         if tokens.next.tag == self.tag:
             return tokens.eat().matched

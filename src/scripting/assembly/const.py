@@ -47,7 +47,7 @@ class Const(BaseExpression):
     name = "CONST"
 
     @classmethod
-    def process(cls, script, stack, value):
+    async def process(cls, script, stack, value):
         """
         Process this expression.
 

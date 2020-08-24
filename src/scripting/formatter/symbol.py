@@ -39,7 +39,7 @@ class Symbol(BaseFormatter):
     name = "symbol"
 
     @classmethod
-    def format(cls, token, previous):
+    async def format(cls, token, previous):
         """
         Format the given token.
 

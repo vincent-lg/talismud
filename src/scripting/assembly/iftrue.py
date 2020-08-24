@@ -49,7 +49,7 @@ class IfTrue(BaseExpression):
     name = "IFTRUE"
 
     @classmethod
-    def process(cls, script, stack, cursor, pop=True):
+    async def process(cls, script, stack, cursor, pop=True):
         """
         Process this expression.
 

@@ -50,7 +50,7 @@ class Not(BaseExpression):
     name = "NOT"
 
     @classmethod
-    def process(cls, script, stack):
+    async def process(cls, script, stack):
         """
         Process this expression.
 
