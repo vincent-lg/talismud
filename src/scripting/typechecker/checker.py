@@ -40,6 +40,10 @@ so the type checker doesn't slow down execution in the least.
 
 """
 
+from queue import Queue
+
+from scripting.namespace.abc import BaseNamespace
+
 class TypeChecker:
 
     """
@@ -48,6 +52,7 @@ class TypeChecker:
 
     def __init__(self, script):
         self.script = script
+        self.variables = {}
 
     async def check(self, ast):
         """
@@ -65,4 +70,24 @@ class TypeChecker:
             itself through the `check_types` method.
 
         """
+        self.update_variables()
         await ast.check_types(self)
+
+    def update_variables(self):
+        """Update the type checker's variables with the script variables."""
+        top_level = self.script.top_level
+        namespaces = Queue()
+        namespaces.put((None, top_level))
+
+        while not namespaces.empty():
+            name, namespace = namespaces.get()
+            for key, value in namespace.attributes.items():
+                sub_name = name
+                if sub_name is not None:
+                    sub_name += "." + key
+                else:
+                    sub_name = key
+
+                self.variables[sub_name] = type(value)
+                if isinstance(value, BaseNamespace):
+                    namespaces.put((sub_name, value))

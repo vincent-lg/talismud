@@ -57,5 +57,5 @@ class TopLevel(BaseNamespace):
 
     async def print(self, string: str):
         """Print a string."""
-        formatter = VariableFormatter(None, self.script.variables)
+        formatter = VariableFormatter(None, self.attributes.copy())
         print(formatter.format(string))

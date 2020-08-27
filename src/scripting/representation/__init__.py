@@ -30,4 +30,3 @@
 """Objects used by the scripting."""
 
 from scripting.representation.abc import REPRESENTATIONS
-from scripting.representation.top_level import TopLevel
