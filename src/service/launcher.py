@@ -34,6 +34,7 @@ import sys
 
 from async_timeout import timeout as async_timeout
 from enum import Enum, Flag, auto
+
 from service.base import BaseService
 
 class MUDOp(Flag):
@@ -433,6 +434,42 @@ class Service(BaseService):
                 break
 
             await host.send_cmd(host.writer, "shell", dict(code=code))
+            success, args = await host.wait_for_cmd(host.reader, "result")
+            if success:
+                prompt = args.get("prompt", "??? ")
+                display = args.get("display", "")
+                print(display.rstrip("\n"))
+
+        # If the game wasn't started before executing code, stop it.
+        if not init_started:
+            await self.action_stop()
+
+    async def action_script(self):
+        """
+        Open a scripting shell and send command to the portal.
+
+        These commands are then sent to the game where they
+        are interpreted.
+
+        """
+        host = self.services["host"]
+        await self.check_status()
+        init_started = self.status == MUDStatus.ALL_ONLINE
+        if not init_started:
+            await self.action_start()
+
+        # In a loop, ask user input and send the scripting command
+        # to the portal, which will forward it to the game, which
+        # will evaluate and answer in the same way.
+        prompt = ">>> "
+        while True:
+            try:
+                code = input(prompt)
+            except KeyboardInterrupt:
+                print()
+                break
+
+            await host.send_cmd(host.writer, "scripting", dict(code=code))
             success, args = await host.wait_for_cmd(host.reader, "result")
             if success:
                 prompt = args.get("prompt", "??? ")

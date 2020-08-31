@@ -361,3 +361,26 @@ class Service(BaseService):
 
         """
         pass
+
+    async def handle_scripting(self, reader, code: str):
+        """
+        Send a 'scripting' command to the game, to execute scripts.
+
+        Args:
+            reader (StreamReader): the reader for this command.
+            code (str): the script to execute.
+
+        Response:
+            The 'result' command with the output.
+
+        """
+        crux = self.services["crux"]
+        if self.game_writer:
+            self.logger.debug(f"Sending 'scripting' to game ID {self.game_id}...")
+            await crux.send_cmd(self.game_writer, "scripting", dict(code=code))
+
+        success, args = await crux.wait_for_cmd(self.game_reader, "result")
+        writer = self.hosts.get(reader, None)
+        if success and writer:
+            await crux.send_cmd(writer, "result", args)
+

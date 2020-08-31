@@ -46,6 +46,8 @@ sub_restart = subparsers.add_parser("restart", help="restart the game process")
 sub_restart.set_defaults(action="restart")
 sub_shell = subparsers.add_parser("shell", help="open a Python console")
 sub_shell.set_defaults(action="shell")
+sub_script = subparsers.add_parser("script", help="open a scripting console")
+sub_script.set_defaults(action="script")
 
 class Launcher(Process):
 
@@ -95,6 +97,8 @@ class Launcher(Process):
             await launcher.action_restart()
         elif args.action == "shell":
             await launcher.action_shell()
+        elif args.action == "script":
+            await launcher.action_script()
         else:
             parser.print_help()
 

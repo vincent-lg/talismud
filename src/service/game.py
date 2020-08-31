@@ -33,11 +33,13 @@ import asyncio
 
 from data.base import db
 from data.session import CMDS_TO_PORTAL, OUTPUT
-from service.shell import Shell
 from service.base import BaseService
+from service.scripting import Scripting
+from service.shell import Shell
 import settings
 
 CONSOLE = Shell({"db": db}, "<shell>")
+SCRIPTING = Scripting()
 
 class Service(BaseService):
 
@@ -257,3 +259,23 @@ class Service(BaseService):
         if host.writer:
             await host.send_cmd(host.writer,
                     "result", dict(display=CONSOLE.output, prompt=prompt))
+
+    async def handle_scripting(self, reader, code: str):
+        """
+        Execute scripting code.
+
+        Args:
+            reader (StreamReader): the reader for this command.
+            code (str): the scripting code to execute.
+
+        Response:
+            The 'result' command with the output.
+
+        """
+        host = self.services["host"]
+        more = await SCRIPTING.push(code)
+        prompt = "... " if more else ">>> "
+
+        if host.writer:
+            await host.send_cmd(host.writer,
+                    "result", dict(display=SCRIPTING.output, prompt=prompt))

@@ -99,7 +99,7 @@ class VariableFormatter(Formatter):
             self.variables = {}
             frame = inspect.currentframe().f_back
             while frame and (locals := frame.f_locals):
-                variables.update(dict(locals))
+                self.variables.update(dict(locals))
                 frame = frame.f_back
 
     def get_field(self, field_name, args, kwargs):
