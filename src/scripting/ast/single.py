@@ -121,7 +121,7 @@ class ID(BaseAST):
 
         """
         try:
-            var_type = checker.variables[self.name]
+            var_type = checker.get_variable_type(self.name)
         except KeyError:
             var_type = None
 

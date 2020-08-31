@@ -36,6 +36,7 @@ from scripting.parser.boolean import BoolExp
 from scripting.parser.combinator import (
         Alternate, Concat, Exp, Keyword, Lazy, Opt, Phrase, Rep, Symbol
 )
+from scripting.parser.function import FuncCall
 from scripting.parser.parser import Parser
 from scripting.parser.single import Identifier, Newline
 
@@ -87,7 +88,7 @@ class Stmt(Alternate):
     """
 
     def __init__(self):
-        super().__init__(AssignStmt(), IfStmt(), WhileStmt())
+        super().__init__(FuncCall(), AssignStmt(), IfStmt(), WhileStmt())
 
 
 class AssignStmt(Concat):

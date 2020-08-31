@@ -41,8 +41,13 @@ so the type checker doesn't slow down execution in the least.
 """
 
 from queue import Queue
+from typing import Any
 
 from scripting.namespace.abc import BaseNamespace
+from scripting.representation.abc import REPRESENTATIONS, BaseRepresentation
+
+# Constants
+_NOT_SET = object()
 
 class TypeChecker:
 
@@ -88,6 +93,75 @@ class TypeChecker:
                 else:
                     sub_name = key
 
-                self.variables[sub_name] = type(value)
+                self.set_variable_type(sub_name, value)
                 if isinstance(value, BaseNamespace):
                     namespaces.put((sub_name, value))
+
+    def get_variable_type(self, name: str):
+        """
+        Return the variable type with this name.
+
+        Args:
+            name (str): a name, with the usual notation (a.b.c).
+
+        Returns:
+            var_type (Any): the variable type.
+
+        Raises:
+            KeyError: the name cannot be found.
+
+        """
+        split = name.split(".")
+        var_type = self.variables[split[0]]
+        for sub_name in split[1:]:
+            if isinstance(var_type, BaseNamespace):
+                var_type = var_type.attributes[sub_name]
+            elif isinstance(var_type, BaseRepresentation):
+                var_type = var_type._get(sub_name)
+            else:
+                var_type = getattr(var_type, sub_name)
+
+        return var_type
+
+    def set_variable_type(self, name: str, var_type: Any):
+        """
+        Change the attribute or variable's type.
+
+        Args:
+            name (str): a name, with the usual notation (a.b.c).
+
+        Raises:
+            KeyError: the name cannot be found.
+
+        """
+        split = name.split(".")
+        if len(split) > 1:
+            obj = self.get_variable_type(name.rsplit(".", 1)[0])
+            sub_name = split[-1]
+        else:
+            obj = self.variables
+            sub_name = name
+
+        try:
+            old_type = self.get_variable_type(name)
+        except KeyError:
+            old_value = _NOT_SET
+
+        # Wrap value in an object representation if needed
+        representation = (REPRESENTATIONS.get(var_type) or
+                REPRESENTATIONS.get(type(var_type)))
+        if representation:
+            if old_type is _NOT_SET:
+                var_type = representation(self.script, var_type)
+            else:
+                old_type._update(self.script, var_type)
+                return
+
+        if isinstance(obj, BaseNamespace):
+            obj.attributes[sub_name] = var_type
+        elif isinstance(obj, BaseRepresentation):
+            obj._set(sub_name, var_type)
+        elif isinstance(obj, dict):
+            obj[sub_name] = var_type
+        else:
+            setattr(obj, sub_name, var_type)

@@ -58,7 +58,7 @@ class AssignmentStatement(BaseAST):
 
         """
         exp_type = await self.exp.check_types(checker)
-        checker.variables[self.name] = exp_type
+        checker.set_variable_type(self.name, exp_type)
 
     async def compute(self, script):
         """

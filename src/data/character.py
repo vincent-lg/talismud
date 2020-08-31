@@ -80,7 +80,8 @@ class Character(HasAttributes, HasCache, HasLocation, HasPermissions,
         Send text to the connected session, if any.
 
         """
-        variables = variables or VarDict()
+        formatter = VariableFormatter(self, variables)
+        text = formatter.format(text)
         if self.session:
             await self.session.msg(text)
 
@@ -120,7 +121,7 @@ class VariableFormatter(Formatter):
             for name in names[1:]:
                 value = getattr(value, name)
 
-            return (value, ".".join(names))
+            return (value, full_name)
 
         raise ValueError(f"cannot find the variable name: {field_name!r}")
 

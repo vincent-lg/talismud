@@ -64,7 +64,11 @@ from scripting.lexer.abc import Token
 from scripting.lexer.perform import create_tokens
 from scripting.parser.perform import parse_tokens
 from scripting.namespace import BaseNamespace, TopLevel
+from scripting.representation.abc import REPRESENTATIONS, BaseRepresentation
 from scripting.typechecker.checker import TypeChecker
+
+# Constants
+_NOT_SET = object()
 
 class Script:
 
@@ -276,6 +280,21 @@ class Script:
         lines.append(line)
         return res + "\n" + "\n".join(lines)
 
+    def set_default_variables(self, **kwargs):
+        """
+        Set the script's default variables.
+
+        This allows to set variables prior to executing the script.
+        Variables are converted to their object representation
+        if necessary.
+
+        Args:
+            Any keyword argument would be a variable name and value.
+
+        """
+        for key, value in kwargs.items():
+            self.set_variable_or_attribute(key, value)
+
     @property
     def next_line(self):
         """Return the assembly's next available line."""
@@ -409,6 +428,8 @@ class Script:
         for sub_name in split[1:]:
             if isinstance(value, BaseNamespace):
                 value = value.attributes[sub_name]
+            elif isinstance(value, BaseRepresentation):
+                value = value._get(sub_name)
             else:
                 value = getattr(value, sub_name)
 
@@ -427,20 +448,30 @@ class Script:
         """
         split = name.split(".")
         if len(split) > 1:
-            obj = self.top_level.attributes[split[0]]
+            obj = self.get_variable_or_attribute(name.rsplit(".", 1)[0])
             sub_name = split[-1]
         else:
             obj = self.top_level
             sub_name = name
 
-        for sub_name in split[1:-1]:
-            if isinstance(obj, BaseNamespace):
-                obj = obj.attributes[sub_name]
+        try:
+            old_value = self.get_variable_or_attribute(name)
+        except KeyError:
+            old_value = _NOT_SET
+
+        # Wrap value in an object representation if needed
+        representation = REPRESENTATIONS.get(type(value))
+        if representation:
+            if old_value is _NOT_SET:
+                value = representation(self, value)
             else:
-                obj = getattr(obj, sub_name)
+                old_value._update(self, value)
+                return
 
         if isinstance(obj, BaseNamespace):
             obj.attributes[sub_name] = value
+        elif isinstance(obj, BaseRepresentation):
+            obj._set(sub_name, value)
         else:
             setattr(obj, sub_name, value)
 

@@ -61,7 +61,7 @@ class FunctionCall(BaseAST):
 
         """
         try:
-            function = checker.script.get_variable_or_attribute(self.name)
+            function = checker.get_variable_type(self.name)
         except KeyError:
             self.raise_type_error(f"The function {self.name!r} can't be found")
 
@@ -111,8 +111,7 @@ class FunctionCall(BaseAST):
             script (script.Script): the script object.
 
         """
-        function = script.get_variable_or_attribute(self.name)
-        script.add_expression("CONST", function)
+        script.add_expression("VALUE", self.name)
         if (arguments := self.arguments):
             for argument in arguments:
                 await argument.compute(script)

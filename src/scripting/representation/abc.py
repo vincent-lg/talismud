@@ -48,7 +48,7 @@ class RepresentationMeta(ABCMeta):
 
     def __init__(cls, name, bases, dct):
         super().__init__(name, bases, dict)
-        if cls.name:
+        if cls.represent:
             REPRESENTATIONS[cls.represent] = cls
 
 
@@ -58,13 +58,22 @@ class BaseRepresentation(metaclass=RepresentationMeta):
     Abstract class for an object representation.
     """
 
-    name = ""
     represent = None # What class to represent? None means top-level
-    attributes = {}
 
-    def __init__(self, script):
+    def __init__(self, script, object):
+        self._script = script
+        self._object = None
+
+    def _update(self, script, representer):
+        """Update this object representation."""
         self.script = script
 
-        # Create the attributes
-        for name, value in self.attributes.items():
-            setattr(self, name, value)
+    def _get(self, key):
+        """Get an attribute from this representation."""
+        if key.startswith("_"):
+            raise KeyError(key)
+
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            raise KeyError(key) from None
