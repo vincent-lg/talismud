@@ -28,3 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """Scripting used by TalisMUD."""
+
+from scripting.event import Event
+from scripting.script import Script

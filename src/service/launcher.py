@@ -438,7 +438,8 @@ class Service(BaseService):
             if success:
                 prompt = args.get("prompt", "??? ")
                 display = args.get("display", "")
-                print(display.rstrip("\n"))
+                if display:
+                    print(display.rstrip("\n"))
 
         # If the game wasn't started before executing code, stop it.
         if not init_started:
@@ -474,7 +475,8 @@ class Service(BaseService):
             if success:
                 prompt = args.get("prompt", "??? ")
                 display = args.get("display", "")
-                print(display.rstrip("\n"))
+                if display:
+                    print(display.rstrip('\n'))
 
         # If the game wasn't started before executing code, stop it.
         if not init_started:

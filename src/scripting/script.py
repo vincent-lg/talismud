@@ -148,10 +148,12 @@ class Script:
 
     def __init__(self, tokens: Optional[List[Token]] = None,
             ast: Optional[BaseAST] = None, check_types: bool = True):
+        from scripting.representation.character import Character
+        self.instructions = None
         self.tokens = tokens or []
         self.ast = ast or None
         self.type_checker = TypeChecker(self) if check_types else None
-        self.assembly = []
+        self.assembly = None
 
         # Assembly-specific data
         self.top_level = TopLevel(self)
@@ -173,6 +175,10 @@ class Script:
         """
         assert self.ast is None, "The AST already exists"
         tokens = create_tokens(to_add)
+        if self.instructions is None:
+            self.instructions = ""
+
+        self.instructions += to_add
         self.tokens += tokens
 
     async def generate_AST(self) -> bool:
@@ -237,6 +243,7 @@ class Script:
 
         """
         assert self.ast, "the Abstract Syntax Tree doesn't exist"
+        self.assembly = []
         await self.ast.compute(self)
 
     def format_assembly(self, individual_lines: bool = False):
@@ -408,6 +415,18 @@ class Script:
         self.ast = None
         self.assembly = []
         self.cursor = 0
+
+    def reset(self):
+        """
+        Reset the script to be ready for execution.
+
+        This will remove variables and reset the cursor at the default
+        0 position, without affecting the tokens, AST and assembly.
+
+        """
+        self.cursor = 0
+        self.top_level = TopLevel(self)
+        self.stack = LifoQueue()
 
     def get_variable_or_attribute(self, name: str):
         """

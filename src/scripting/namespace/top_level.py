@@ -40,7 +40,7 @@ defined as a method on the TopLevel namespace.
 
 """
 
-from data.character import VariableFormatter
+from scripting.variable import VariableFormatter
 from scripting.namespace.abc import BaseNamespace
 from scripting.namespace.debug import Debug
 
