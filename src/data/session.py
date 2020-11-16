@@ -30,6 +30,7 @@
 """Session entity."""
 
 import asyncio
+import pickle
 import typing as ty
 from uuid import UUID, uuid4
 
@@ -37,16 +38,15 @@ from pony.orm import Optional, PrimaryKey, Required, Set
 
 from context.base import BaseContext
 from data.base import db, PicklableEntity
-from data.mixins import HasAttributes, HasMixins, HasStorage
-from data.properties import lazy_property
+from data.decorators import lazy_property
+from data.handlers import OptionHandler
 import settings
 
 # Asynchronous queue of all session output messages
 OUTPUT = asyncio.Queue()
 CMDS_TO_PORTAL = asyncio.Queue()
 
-class Session(HasAttributes, HasStorage, PicklableEntity, db.Entity,
-        metaclass=HasMixins):
+class Session(PicklableEntity, db.Entity):
 
     """
     Session entity.
@@ -54,7 +54,7 @@ class Session(HasAttributes, HasStorage, PicklableEntity, db.Entity,
     A session is an object identifying a live connection.  Each time
     a user connects, a session is created with a different identifier
     (UUID).  Each time this connection is broken, the session is destroyed.
-    Connections can store data (through the storage handler and the
+    Connections can store data (through the option handler and the
     attributes handler).
 
     Note: if a user connects to the portal, a session is created in the
@@ -71,6 +71,7 @@ class Session(HasAttributes, HasStorage, PicklableEntity, db.Entity,
     context_path = Required(str, max_len=64)
     account = Optional("Account")
     character = Optional("Character")
+    binary_options = Required(bytes, default=pickle.dumps({}))
 
     @lazy_property
     def context(self):
@@ -82,6 +83,11 @@ class Session(HasAttributes, HasStorage, PicklableEntity, db.Entity,
     def context(self, context):
         """Change the session's context."""
         self.context_path = type(context).__module__
+
+    @lazy_property
+    def options(self):
+        """Return the session option handler."""
+        return OptionHandler(self)
 
     async def msg(self, text: ty.Union[str, bytes]):
         """
@@ -104,7 +110,7 @@ class Session(HasAttributes, HasStorage, PicklableEntity, db.Entity,
             If the sent text should be encoded (that is, if its type
             is `str`), the session encoding is first selected, if it
             exists.  The session encoding is stored in the session
-            storage, `session.storage["encoding"]`.  The
+            options `session.options["encoding"]`.  The
             `settings.DEFAULT_ENCODING` is used if the session
             didn't specify any encoding.  By default, errors
             during the process are replaced, so accented letters not
@@ -112,7 +118,7 @@ class Session(HasAttributes, HasStorage, PicklableEntity, db.Entity,
 
         """
         if isinstance(text, str):
-            encoding = self.storage.get("encoding", settings.DEFAULT_ENCODING)
+            encoding = self.options.get("encoding", settings.DEFAULT_ENCODING)
             try:
                 encoded = text.encode(encoding, errors="replace")
             except LookupError:

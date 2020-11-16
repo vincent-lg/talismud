@@ -168,10 +168,7 @@ class RoomDocument(Document):
 
         description = self.cleaned.description
         if description:
-            if room.description:
-                room.description.text = description
-            else:
-                room.description = db.RoomDescription(text=description)
+            room.description.set(description)
 
         # Add the exits, if possible
         for exit in list(self.cleaned.exits):

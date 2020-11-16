@@ -185,7 +185,7 @@ class Service(BaseService):
             self.sessions[session_id] = session
 
         # Decode the command
-        encoding = session.storage.get("encoding", settings.DEFAULT_ENCODING)
+        encoding = session.options.get("encoding", settings.DEFAULT_ENCODING)
         try:
             decoded = command.decode(encoding, errors="replace")
         except LookupError:

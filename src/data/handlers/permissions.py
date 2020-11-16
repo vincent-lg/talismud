@@ -27,39 +27,33 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Name context, to create a new character's name."""
+"""Permission handler, to handle object permissions."""
 
-from context.base import BaseContext
-import settings
+import typing as ty
 
-class Name(BaseContext):
+from data.handlers.tags import TagHandler
 
-    """
-    Context to enter the character's new name.
+class PermissionHandler(TagHandler):
 
-    Input:
-        <valid>: valid name, move to character.complete.
-        <invalid>: invalid name, gives reason and stays here.
+    """Permission handler, using a tag handler behind the scenes."""
 
-    """
+    subset = "permission"
 
-    text = f"""
-        You are now about to create a new character in {settings.GAME_NAME}.
-        Enter the name of your character as others will see it in the game.
+    @classmethod
+    def search(cls, name: ty.Optional[str] = None,
+            category: ty.Optional[str] = None) -> tuple:
+        """
+        Search a given permission, return a list of objects maching it.
 
-        Your new character's name:
-    """
+        Args:
+            name (str, optional): the permission name.
+            category (str, optional): the name of the category.
 
-    async def input(self, name):
-        """The user entered something."""
-        # Check that the name isn't a forbidden name
-        if name.lower() in settings.FORBIDDEN_CHARACTER_NAMES:
-            await self.msg(
-                f"The name {name!r} is forbidden.  Please "
-                "choose another one."
-            )
-            return
+        Returns:
+            objects (list): a list of objects matching this permission.
 
-        await self.msg(f"You selected the name: {name!r}.")
-        self.session.options["character_name"] = name
-        await self.move("character.complete")
+        Note:
+            `name` or `category` should be specified.
+
+        """
+        return super().search(name, category)

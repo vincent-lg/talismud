@@ -27,72 +27,61 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Cache mixin.
+"""Option handler, to work with an inline dictionary.
 
-A cache is somewhat similar to a storage, but it doesn't store anything
-except in memory.  This is just a convenience to store non-persistent
-data that can still be retrieved, should the game restart, but that
-are stored in the cache for greater ease otherwise.
+Contrary to most handlers, the OptionHandler requires a
+`binary_options` field, set as a required byte string on the
+entity it modifies.
 
 """
 
+import pickle
+
 from collections.abc import MutableMapping
 
-from data.properties import lazy_property
+class OptionHandler(MutableMapping):
 
-class HasCache:
+    """Option handler, to handle options in a dictionary-like object.
 
-    """
-    Mixin to add the cache to entities.
+    The option handler is an object which uses a binary representation,
+    stored in the entity itself.  It has all the methods one can expect
+    from a dictionary and can be used as such.
 
-    The cache handler is an object that can be manipulated just like
-    a dictionary, in a similar way to the storage.  However, nothing
-    is stored in the database through the cache, the data isn't
-    persisted:
-
-        >>> character.cache["gold"] = 5
-        >>> character.cache["gold"]
-        5
-        >>> del character.cache["gold"]
-        >>> character.cache["something"] = 1
-        >>> # ... assuming the game restarts here
-        ... character.cache.get("something", 0)
-        0
+        >>> session.options["username"] = "someone"
+        >>> session.options["username"]
+        'someone'
+        >>> len(session.options)
+        1
+        >>> del session.options["username"]
+        >>> sesession.options.get("username", "")
+        ''
+        >>> # ...
 
     """
 
-    @staticmethod
-    def extend_entity(cls):
-        """Add entity attributes to the entity."""
-        pass
+    __slots__ = ("__owner", "__binary_field", "__options")
 
-    @lazy_property
-    def cache(self):
-        """Return the handler for the cache."""
-        return CacheHandler(self)
-
-
-class CacheHandler(MutableMapping):
-
-    """Handler for memorizing data in a dictionary."""
-
-    __slots__ = ("owner", "data")
-
-    def __init__(self, owner):
-        self.owner = owner
-        self.data = {}
+    def __init__(self, owner, binary_field="binary_options"):
+        self.__owner = owner
+        self.__binary_field = binary_field
+        binary = getattr(owner, binary_field)
+        self.__options = pickle.loads(binary)
 
     def __len__(self):
-        return len(self.data)
+        return len(self.__options)
 
     def __iter__(self):
-        return iter(self.data)
+        return iter(self.__options)
 
     def __getitem__(self, key):
-        return self.data[key]
+        return self.__options[key]
 
     def __setitem__(self, key, value):
-        self.data[key] = value
+        self.__options[key] = value
+        setattr(self.__owner, self.__binary_field, pickle.dumps(
+                self.__options))
 
     def __delitem__(self, key):
-        del self.data[key]
+        del self.__options[key]
+        setattr(self.__owner, self.__binary_field, pickle.dumps(
+                self.__options))

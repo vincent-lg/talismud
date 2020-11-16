@@ -38,17 +38,14 @@ from pony.orm import Optional, Required, Set
 from command.layer import StaticCommandLayer
 from command.stack import CommandStack
 from data.base import db, PicklableEntity
-from data.mixins import (
-        HasAttributes, HasCache, HasLocation, HasMixins, HasScripts,
-        HasPermissions, HasStorage, HasTags
-)
-from data.properties import lazy_property
+from data.decorators import lazy_property
+from data.handlers import (
+        AttributeHandler, LocatorHandler, PermissionHandler,
+        NameHandler, TagHandler)
 from scripting.variable import VariableFormatter
 import settings
 
-class Character(HasAttributes, HasCache, HasLocation, HasPermissions,
-        HasScripts, HasStorage, HasTags, PicklableEntity, db.Entity,
-        metaclass=HasMixins):
+class Character(PicklableEntity, db.Entity):
 
     """Character entity."""
 
@@ -57,6 +54,38 @@ class Character(HasAttributes, HasCache, HasLocation, HasPermissions,
     account = Optional("Account")
     created_on = Required(datetime, default=datetime.utcnow)
     db_command_stack = Optional(bytes)
+
+    @lazy_property
+    def db(self):
+        return AttributeHandler(self)
+
+    @lazy_property
+    def tags(self):
+        return TagHandler(self)
+
+    @lazy_property
+    def locator(self):
+        return LocatorHandler(self)
+
+    @lazy_property
+    def permissions(self):
+        return PermissionHandler(self)
+
+    @lazy_property
+    def location(self):
+        return self.locator.get()
+
+    @location.setter
+    def location(self, new_location):
+        self.locator.set(new_location)
+
+    @property
+    def contents(self):
+        return self.locator.contents()
+
+    @lazy_property
+    def names(self):
+        return NameHandler(self)
 
     @classmethod
     def init_script(cls):

@@ -32,13 +32,11 @@
 from pony.orm import Optional, Required, Set
 
 from data.base import db, PicklableEntity
+from data.decorators import lazy_property
 from data.exit import ExitHandler
-from data.mixins import (HasAttributes, HasDescription,
-        HasLocation, HasMixins, HasTags)
-from data.properties import lazy_property
+from data.handlers import AttributeHandler, DescriptionHandler, LocatorHandler
 
-class Room(HasAttributes, HasDescription, HasLocation, HasTags,
-        PicklableEntity, db.Entity, metaclass=HasMixins):
+class Room(PicklableEntity, db.Entity):
 
     """Room entity."""
 
@@ -51,11 +49,35 @@ class Room(HasAttributes, HasDescription, HasLocation, HasTags,
     exits_to = Set("Exit", reverse="to")
 
     @lazy_property
+    def db(self):
+        return AttributeHandler(self)
+
+    @lazy_property
     def exits(self):
         """Return the ExitHandler."""
         return ExitHandler(self)
 
-    def look(self, character: db.Character):
+    @lazy_property
+    def description(self):
+        return DescriptionHandler(self)
+
+    @lazy_property
+    def locator(self):
+        return LocatorHandler(self)
+
+    @lazy_property
+    def location(self):
+        return self.locator.get()
+
+    @location.setter
+    def location(self, new_location):
+        self.locator.set(new_location)
+
+    @property
+    def contents(self):
+        return self.locator.contents()
+
+    def look(self, character: 'db.Character'):
         """
         The character wants to look at this room.
 

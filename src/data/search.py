@@ -27,14 +27,22 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Data mixins, to add data and methods to entities."""
+"""Shortcut to the search features of TalisMUD.
 
-from data.mixins.attributes import HasAttributes
-from data.mixins.cache import HasCache
-from data.mixins.description import HasDescription
-from data.mixins.location import HasLocation
-from data.mixins.meta import HasMixins
-from data.mixins.permissions import HasPermissions
-from data.mixins.scripts import HasScripts
-from data.mixins.storage import HasStorage
-from data.mixins.tags import HasTags
+Most search functions are stored, as class methods, on the handlers.
+This module intends to group them.
+
+Functions:
+    search_permission(name, category): search a permission.  Both
+            arguments are optional.  Returns a list of objects
+            with this permission or permission category.
+    search_tag(name, category): search a tag.  Both arguments are
+            optional.  Returns a list of objects with this tag or category.
+
+"""
+
+from data.handlers.permissions import PermissionHandler
+from data.handlers.tags import TagHandler
+
+search_permission = PermissionHandler.search
+search_tag = TagHandler.search

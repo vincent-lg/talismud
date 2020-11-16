@@ -72,7 +72,7 @@ class Characters(BaseContext):
         for i, character in enumerate(
                 account.characters.sort_by(Character.created_on)):
             if str(i + 1) == command:
-                self.session.storage["character"] = character
+                self.session.options["character"] = character
                 await self.move("connection.login")
                 return
 

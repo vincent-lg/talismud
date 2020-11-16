@@ -27,36 +27,43 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Metaclass for entities using mixins."""
+"""Event class, to represent scripting events.
 
-from queue import Queue
+Usually a script is linked to an event, a specific action that
+occurs at some point.  Events represent this moment in code.
 
-from pony.orm import Optional, Required, Set
-from pony.orm.core import EntityMeta
+"""
 
-class HasMixins(EntityMeta):
-    """Metaclass to override entity metaclass."""
-    def __init__(entity, name, bases, cls_dict):
-        classes = Queue()
-        for cls in entity.__bases__:
-            classes.put(cls)
+from typing import Any
 
-        # Flat explore of all base classes
-        while not classes.empty():
-            cls = classes.get()
+class Event:
 
-            # Add the current child class to the mixin
-            method = getattr(cls, "extend_entity", None)
-            if method:
-                method(entity)
+    """Class to represent a scripting event."""
 
-            children = getattr(cls, "children", None)
-            if children is not None:
-                children.append(entity)
+    def __init__(self, name):
+        self.name = name
+        self.variables = {}
+        self.help = ""
 
-            # Explore the parent class
-            for parent in cls.__bases__:
-                classes.put(parent)
+    def add_variable(self, name: str, var_type: Any):
+        """
+        Add a new variable to this event.
 
-        entity.__class__ = EntityMeta
-        EntityMeta.__init__(entity, name, bases, cls_dict)
+        Args:
+            name (str): the variable name.
+            var_type (Any): the variable type.
+
+        """
+        self.variables[name] = var_type
+        return self
+
+    def set_help(self, help):
+        """
+        Change the string file for this event.
+
+        Args:
+            help (str): the new help string.
+
+        """
+        self.help = help
+        return self

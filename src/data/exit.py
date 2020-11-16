@@ -34,10 +34,8 @@ import typing as ty
 from pony.orm import Optional, Required, Set
 
 from data.base import db, PicklableEntity
-from data.mixins import HasAttributes, HasMixins, HasTags
 
-class Exit(HasAttributes, HasTags, PicklableEntity, db.Entity,
-        metaclass=HasMixins):
+class Exit(PicklableEntity, db.Entity):
 
     """
     Exit entity, to connect two rooms.

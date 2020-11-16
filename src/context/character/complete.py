@@ -48,7 +48,7 @@ class Complete(BaseContext):
 
     async def refresh(self):
         """Try to create a character."""
-        name = self.session.storage.get("character_name")
+        name = self.session.options.get("character_name")
 
         # Check that all data are filled
         if name is None:
@@ -68,8 +68,8 @@ class Complete(BaseContext):
             return
 
         character.account = self.session.account
-        self.session.storage["character"] = character
-        character.storage["saved_location"] = Room.get(
+        self.session.options["character"] = character
+        character.db.saved_location = Room.get(
                 barcode=settings.START_ROOM)
         await self.msg(f"The character named {name} was created successfully.")
         await self.move("connection.login")

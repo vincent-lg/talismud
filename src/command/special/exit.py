@@ -43,6 +43,8 @@ class ExitCommand(Command):
 
     """
 
+    name = "exit command"
+
     def __init__(self, character, exit):
         super().__init__(character=character, sep=None, arguments=exit.name)
         self.exit = exit

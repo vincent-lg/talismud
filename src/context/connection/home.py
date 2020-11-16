@@ -64,5 +64,5 @@ class Home(BaseContext):
                 "want to create it, type 'new', otherwise try another name.")
             return
 
-        self.session.storage["account"] = account
+        self.session.options["account"] = account
         await self.move("connection.password")

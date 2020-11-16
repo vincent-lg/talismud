@@ -30,7 +30,7 @@
 """Ghost context to connect a session and a character.
 
 This context will attempt to connect the current session with an existing
-character, recorded in the session storage, and redirect to
+character, recorded in the session options, and redirect to
 "connection.game" (the connected mode for all players, where
 they can enter commands).
 
@@ -46,7 +46,7 @@ class Login(BaseContext):
 
     async def refresh(self):
         """Try to create a character."""
-        character = self.session.storage.get("character")
+        character = self.session.options.get("character")
 
         # Check that all data are filled
         if character is None:
@@ -57,12 +57,12 @@ class Login(BaseContext):
             return
 
         character.session = self.session
-        location = character.storage.get("saved_location")
+        location = character.db.get("saved_location", None)
         if location is None:
             location = Room.get(barcode=settings.RETURN_ROOM)
 
         if character.location is None:
-            character.storage["saved_location"] = location
+            character.db.saved_location = location
             character.location = location
 
         await self.move("connection.game")

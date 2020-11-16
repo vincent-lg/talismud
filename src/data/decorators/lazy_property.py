@@ -27,7 +27,14 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Properties for the database models."""
+"""Lazy property, to optimize getting and setting data.
+
+The lazy property descriptor is used similarly to a property,
+but it caches the data it retrieves the first time it's called
+and then will only return this cached data, unless a setter
+is called in the meantime.
+
+"""
 
 _MISSING = object()
 
@@ -92,6 +99,7 @@ class LazyPropertyDescriptor:
     def setter(self, func):
         self.fset = func
         return self
+
 
 def lazy_property(func):
     return LazyPropertyDescriptor(func)

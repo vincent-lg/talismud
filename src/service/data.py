@@ -36,6 +36,7 @@ from logbook import FileHandler, Logger
 from pony.orm import commit, core, db_session, set_sql_debug
 
 from data.base import db
+from data.search import search_permission
 from service.base import BaseService
 import settings
 
@@ -64,7 +65,7 @@ class Service(BaseService):
         'permission') set.
 
         """
-        return bool(db.CharacterTag.get(name="admin", category="permission"))
+        return bool(search_permission("admin"))
 
     async def init(self):
         """Asynchronously initialize the service."""

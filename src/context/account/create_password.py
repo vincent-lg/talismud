@@ -71,5 +71,5 @@ class CreatePassword(BaseContext):
             return
 
         await self.msg("You selected a password. Great!")
-        self.session.storage["password"] = password
+        self.session.options["password"] = password
         await self.move("account.confirm_password")

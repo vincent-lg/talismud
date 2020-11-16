@@ -46,7 +46,7 @@ class Game(BaseContext):
     async def enter(self):
         """The session enters the context, check the character's location."""
         character = self.session.character
-        location = character.storage.get("saved_location")
+        location = character.db.get("saved_location", None)
         if character.location is None:
             character.location = location
 

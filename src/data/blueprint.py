@@ -41,7 +41,6 @@ from yaml import safe_load_all
 from data.base import db, PicklableEntity
 from data.blueprints.blueprint import Blueprint as BP
 from data.blueprints.parser.base import AbstractParser
-from data.mixins import HasMixins
 import settings
 
 # Logger
@@ -56,7 +55,7 @@ logger.handlers.append(file_handler)
 
 PARENT = Path("blueprints")
 
-class Blueprint(PicklableEntity, db.Entity, metaclass=HasMixins):
+class Blueprint(PicklableEntity, db.Entity):
 
     """
     Keep track of the applied blueprints.
@@ -91,4 +90,3 @@ class Blueprint(PicklableEntity, db.Entity, metaclass=HasMixins):
         parser = parser(**options)
         parser.retrieve_blueprints()
         parser.apply()
-

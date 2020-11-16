@@ -54,7 +54,7 @@ class ConfirmPassword(BaseContext):
 
     async def input(self, password):
         """The user entered something."""
-        original = self.session.storage.get("password", "")
+        original = self.session.options.get("password", "")
 
         if not original:
             await self.msg(

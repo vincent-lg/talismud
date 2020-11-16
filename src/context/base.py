@@ -60,8 +60,8 @@ class BaseContext:
 
     Instance attributes:
         session (Session): the session object.  You can use
-                          `session.storage` to access the session's
-                          storage handler which can be handy to store
+                          `session.options` to access the session's
+                          option handler which can be handy to store
                           information on the session itself.
                           This information will be available as long
                           as the session exists (that is, even if the

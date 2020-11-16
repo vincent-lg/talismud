@@ -46,9 +46,9 @@ class Complete(BaseContext):
 
     async def refresh(self):
         """Try to create an account."""
-        username = self.session.storage.get("username")
-        password = self.session.storage.get("password")
-        email = self.session.storage.get("email")
+        username = self.session.options.get("username")
+        password = self.session.options.get("password")
+        email = self.session.options.get("email")
 
         # Check that all data are filled
         if username is None or Account.get(username=username):

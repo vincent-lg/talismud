@@ -41,7 +41,6 @@ from logbook import FileHandler, Logger
 from pony.orm import Required
 
 from data.base import db, PicklableEntity
-from data.mixins import HasMixins
 
 # Logger
 logger = Logger()
@@ -53,7 +52,7 @@ file_handler.format_string = (
 )
 logger.handlers.append(file_handler)
 
-class Delay(PicklableEntity, db.Entity, metaclass=HasMixins):
+class Delay(PicklableEntity, db.Entity):
 
     """
     Delayed action, to be executed after some time.

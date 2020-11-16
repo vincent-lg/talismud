@@ -27,39 +27,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Name context, to create a new character's name."""
+"""Data decorators, included to add behavior to database classes."""
 
-from context.base import BaseContext
-import settings
-
-class Name(BaseContext):
-
-    """
-    Context to enter the character's new name.
-
-    Input:
-        <valid>: valid name, move to character.complete.
-        <invalid>: invalid name, gives reason and stays here.
-
-    """
-
-    text = f"""
-        You are now about to create a new character in {settings.GAME_NAME}.
-        Enter the name of your character as others will see it in the game.
-
-        Your new character's name:
-    """
-
-    async def input(self, name):
-        """The user entered something."""
-        # Check that the name isn't a forbidden name
-        if name.lower() in settings.FORBIDDEN_CHARACTER_NAMES:
-            await self.msg(
-                f"The name {name!r} is forbidden.  Please "
-                "choose another one."
-            )
-            return
-
-        await self.msg(f"You selected the name: {name!r}.")
-        self.session.options["character_name"] = name
-        await self.move("character.complete")
+from data.decorators.lazy_property import lazy_property
