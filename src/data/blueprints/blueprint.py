@@ -45,7 +45,7 @@ from data.blueprints.exceptions import DelayMe, DelayDocument
 
 class Blueprint:
 
-    """A blueprint, hodling several documents."""
+    """A blueprint, holding several documents."""
 
     def __init__(self, documents: Sequence[Dict[str, Any]]):
         self.documents = documents

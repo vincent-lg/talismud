@@ -91,7 +91,7 @@ class Document:
     However, some fields are mandatory.  Some are optional.
     Fields have a fixed type although some degree of conversion
     is available.  To better understand the mechanism, look at
-    a concrete document type, like `RoomDescription`.
+    a concrete document type, like `RoomDocument`.
 
     Methods available on all document types:
         apply(): apply this document in the database directly.
@@ -223,18 +223,27 @@ def create(blueprint, document: Dict[str, Any]):
     # document['type'] is mandatory
     document_type = document.pop("type", None)
     if document_type is None:
-        raise ValueError("the given document doesn't have a field 'type', describing the document type")
+        raise ValueError(
+                "the given document doesn't have a field 'type', "
+                "describing the document type"
+        )
 
     document_type = document_type.lower()
     if document_type not in DOCUMENT_TYPES:
-        raise ValueError(f"the specified document type, {document_type!r}, isn't a valid document type")
+        raise ValueError(
+                f"the specified document type, {document_type!r}, "
+                "isn't a valid document type"
+        )
 
     document_module, document_class = DOCUMENT_TYPES[
             document_type].rsplit(".", 1)
     module = import_module(document_module)
     DocClass = getattr(module, document_class, None)
     if DocClass is None:
-        raise ValueError(f"cannot find the class {document_class} in {document_module}")
+        raise ValueError(
+                f"cannot find the class {document_class} "
+                f"in {document_module}"
+        )
 
     doc = DocClass(blueprint)
     doc.fill(document)
