@@ -87,6 +87,16 @@ class Account(PicklableEntity, db.Entity):
         """
         return self.test_password(self.hashed_password, password)
 
+    def change_password(self, new_password: str):
+        """
+        Change the account password, hashing it.
+
+        Args:
+            new_password (str): the new account password (not hashed).
+
+        """
+        self.hashed_password = self.hash_password(new_password)
+
     @classmethod
     def create_with_password(cls, username: str, plain_password: str,
             email: ty.Optional[str]) -> "Account":
@@ -115,7 +125,7 @@ class Account(PicklableEntity, db.Entity):
         """
         Hash the given plain password, return it hashed.
 
-        If the salt is provided, it is used for hhashing.  If not,
+        If the salt is provided, it is used for hashing.  If not,
         it is randomly generated.
 
         Args:

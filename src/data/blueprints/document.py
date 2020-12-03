@@ -50,6 +50,8 @@ from data.base import db
 
 NOT_SET = object()
 DOCUMENT_TYPES = {
+        "account": "data.blueprints.account.AccountDocument",
+        "character": "data.blueprints.character.CharacterDocument",
         "exit": "data.blueprints.exit.ExitDocument",
         "room": "data.blueprints.room.RoomDocument",
 }
@@ -164,8 +166,23 @@ class Document:
 
         raise ValueError(f"presence {presence} not known")
 
+    def is_proper_str_or_bytes(self, value, document, max_len=None,
+            presence="required"):
+        """Parse a string or byte-string."""
+        if presence == "required":
+            if value is NOT_SET:
+                raise ValueError("this field is required")
+            return value
+        elif presence == "optional":
+            return value
+
+        raise ValueError(f"presence {presence} not known")
+
     def default_str(self):
         return ""
+
+    def default_str_or_bytes(self):
+        return b""
 
     def default_int(self):
         return 0
