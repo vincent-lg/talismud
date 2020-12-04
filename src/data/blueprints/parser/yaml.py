@@ -29,27 +29,28 @@
 
 """YAML concrete parser.
 
-This parser uses the YAML format to read and write blueprints.  It uses the filesystem to store and retrieve data.
+This parser uses the YAML format to read and write blueprints.  It uses
+the filesystem to store and retrieve data.
 
 Options:
     directory (str): the directory name where blueprints are stored on
             disk.  To change this setting, edit "BLUEPRINT_DIRECTORY".
     backup (bool): whether to use a backup mode or not.  It is
-            recommended to do so.i  A backup mode will ensure that
+            recommended to do so.  A backup mode will ensure that
             files are not completely lost for each iteration.
             To set this setting, change "BLUEPRINT_BACKUP".
+            By default, the backup mode is enabled.
 
 """
 
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
-from typing import List, Optional
 
 import yaml
 
 from data.base import db
-from data.blueprint import logger
+from data.handlers.blueprints import logger
 from data.blueprints.blueprint import Blueprint
 from data.blueprints.parser.base import AbstractParser
 
@@ -66,14 +67,16 @@ yaml.add_representer(str, str_presenter)
 class YAMLParser(AbstractParser):
 
     """
-    YAML parser.
+    YAML parser for blueprints.
 
     This parser uses the YAML format to read and write individual
     documents.  It stores these documents in files.
 
     Options:
         directory (str): the location of the YML blueprint files.
+                         Default to 'blueprints'.
         backup (bool): whether to use a backup mode.
+                       Default to `true`.
 
     """
 
@@ -81,7 +84,7 @@ class YAMLParser(AbstractParser):
             backup: Optional[bool] = True):
         directory = str(directory)
         if Path(directory).is_absolute():
-            self.directory = directory
+            self.directory = Path(directory)
         else:
             self.directory = Path().absolute() / directory
         self.backup = backup
@@ -107,7 +110,7 @@ class YAMLParser(AbstractParser):
             # Read the file
             with path.open("r", encoding="utf-8") as file:
                 documents = yaml.safe_load_all(file.read())
-                blueprint = Blueprint(list(documents))
+                blueprint = Blueprint(str(relative), list(documents))
 
             num_docs = len(blueprint.documents)
             logger.info(
@@ -130,12 +133,12 @@ class YAMLParser(AbstractParser):
         """
         for relative, blueprint in self.blueprints.items():
             path = self.directory / relative
-            record = db.Blueprint.get(path=str(relative))
+            record = db.Blueprint.get(name=str(relative))
             last_modified = datetime.fromtimestamp(
                     path.stat().st_mtime)
             if record is None:
                 should_apply = True
-                record = db.Blueprint(path=str(relative),
+                record = db.Blueprint(name=str(relative),
                         modified=last_modified)
             else:
                 should_apply = last_modified > record.modified

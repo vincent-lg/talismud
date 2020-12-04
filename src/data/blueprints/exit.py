@@ -96,4 +96,4 @@ class ExitDocument(Document):
                     origin=origin, to=destination,
                     barcode=self.cleaned.barcode)
 
-        self.applied = False
+        self.objects = (exit, )

@@ -48,7 +48,7 @@ from pony.orm import Optional, Required, Set
 
 from data.base import db, PicklableEntity
 from data.decorators import lazy_property
-from data.handlers import OptionHandler
+from data.handlers import BlueprintHandler, OptionHandler
 import settings
 
 class Account(PicklableEntity, db.Entity):
@@ -64,6 +64,10 @@ class Account(PicklableEntity, db.Entity):
     web_sessions = Set("WebSession")
     characters = Set("Character")
     binary_options = Required(bytes, default=pickle.dumps({}))
+
+    @lazy_property
+    def blueprints(self):
+        return BlueprintHandler(self)
 
     @lazy_property
     def options(self):

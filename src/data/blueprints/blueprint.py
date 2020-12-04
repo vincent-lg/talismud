@@ -47,7 +47,8 @@ class Blueprint:
 
     """A blueprint, holding several documents."""
 
-    def __init__(self, documents: Sequence[Dict[str, Any]]):
+    def __init__(self, name: str, documents: Sequence[Dict[str, Any]]):
+        self.name = name
         self.documents = documents
         self.delayed = []
         self.applied = 0
@@ -126,8 +127,11 @@ class Blueprint:
                     delayed.append(exc.document)
                 else:
                     applied = True
+                    for obj in document.objects:
+                        obj.blueprints.add(self.name)
 
             self.applied += 1
+
 
         # Second wave, try to apply the delayed documents
         for document in delayed:
@@ -139,3 +143,5 @@ class Blueprint:
                 self.delayed.append(exc.document)
             else:
                 self.applied += 1
+                for obj in document.objects:
+                    obj.blueprints.add(self.name)

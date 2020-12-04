@@ -106,6 +106,7 @@ class Document:
         self.blueprint = blueprint
         self.applied = False
         self.cleaned = Namespace()
+        self.objects = ()
 
     @property
     def dictionary(self):

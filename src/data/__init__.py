@@ -30,7 +30,6 @@
 """Data package, to host database entities and data handlers."""
 
 from data.account import Account
-from data.blueprint import Blueprint
 from data.character import Character
 from data.delay import Delay
 from data.exit import Exit

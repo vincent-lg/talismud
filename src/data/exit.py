@@ -34,6 +34,8 @@ import typing as ty
 from pony.orm import Optional, Required, Set
 
 from data.base import db, PicklableEntity
+from data.decorators import lazy_property
+from data.handlers import BlueprintHandler
 
 class Exit(PicklableEntity, db.Entity):
 
@@ -86,6 +88,10 @@ class Exit(PicklableEntity, db.Entity):
     origin = Optional("Room", reverse="exits_from")
     to = Optional("Room", reverse="exits_to")
     barcode = Optional(str, max_len=32)
+
+    @lazy_property
+    def blueprints(self):
+        return BlueprintHandler(self)
 
     def name_for(self, room):
         """

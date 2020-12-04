@@ -27,20 +27,24 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Blueprint entity."""
+"""Handler to add blueprints to objects.
+
+Blueprints are internally considered like tags with a different subset,
+though some additional methods are implemented.
+
+"""
 
 from datetime import datetime
 from importlib import import_module
-from pathlib import Path
-from typing import Callable, Union
+import typing as ty
 
 from logbook import FileHandler, Logger
-from pony.orm import Required
-from yaml import safe_load_all
+from pony.orm import PrimaryKey, Required, commit, select
 
 from data.base import db, PicklableEntity
 from data.blueprints.blueprint import Blueprint as BP
 from data.blueprints.parser.base import AbstractParser
+from data.handlers.tags import TagHandler
 import settings
 
 # Logger
@@ -53,12 +57,91 @@ file_handler.format_string = (
 )
 logger.handlers.append(file_handler)
 
-PARENT = Path("blueprints")
+class BlueprintHandler(TagHandler):
+
+    """Blueprint handler, using a tag handler behind the scenes."""
+
+    subset = "blueprint"
+    blueprints = {} # {unique name: blueprint object}
+
+    def get(self, *others):
+        """
+        Return the blueprints for the owner and additional objects.
+
+        Args:
+            *others (list): other objects.
+
+        """
+        objects = [self._TagHandler__owner]
+        for other in others:
+            if other.id is None:
+                commit()
+            objects.append(other)
+
+        str_ids = tuple(set([f"{type(obj).__name__}:{obj.id}"
+                for obj in objects]))
+        query = self._get_search_query()
+        query = select(link for link in db.TagLink if link.tag in query and link.str_id in str_ids)
+        print(query.get_sql())
+        return tuple(query)
+
+    def save(self, *others):
+        """
+        Save all blueprints of the owner object.
+
+        The owner can be tagged with different blueprints.  Save all of them, including other blueprints passed as arguments.
+
+        Args:
+            others (optional): other objects whose blueprint should be saved.
+
+        Note:
+            Saving several blueprints at once is more optimized.  For
+            instance, let's assume you need to save a room and its
+            exit.  There's no telling whether these two objects
+            are in the same blueprint, so you could do something like this:
+
+                >>> exit.blueprints.save()
+                >>> room.blueprints.save()
+
+            On the other hand, if both are in the same blueprint,
+            this will force two file writes and lose much time.
+            Better to do:
+
+                >>> exit.blueprints.save(room)
+
+            This will force to save both exit blueprints and
+            room blueprints, but will do it more intelligently and
+            will avoid the trap described above, saving only
+            unique blueprints.
+
+        """
+        blueprints = self.get(*others)
+        query = self._get_search_query()
+        objects = [self.__owner]
+    @classmethod
+    def search(cls, name: ty.Optional[str] = None,
+            category: ty.Optional[str] = None) -> tuple:
+        """
+        Search a given blueprint, return a list of objects matching it.
+
+        Args:
+            name (str, optional): the blueprint unique name.
+            category (str, optional): the name of the category.
+
+        Returns:
+            objects (list): a list of objects matching this blueprint.
+
+        Note:
+            `name` or `category` should be specified.
+
+        """
+        return super().search(name, category)
+
 
 class Blueprint(PicklableEntity, db.Entity):
 
     """
-    Keep track of the applied blueprints.
+    Blueprint entity, complement to the blueprint tag.
 
     A blueprint is a file in YML format, stored in the blueprints/
     directory.  Each file is applied when the game starts, but the
@@ -67,8 +150,8 @@ class Blueprint(PicklableEntity, db.Entity):
 
     """
 
+    name = PrimaryKey(str)
     modified = Required(datetime)
-    path = Required(str)
 
     @classmethod
     def apply_all(cls):

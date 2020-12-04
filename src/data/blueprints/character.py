@@ -76,3 +76,5 @@ class CharacterDocument(Document):
         for permission in self.cleaned.permissions.split():
             if permission:
                 character.permissions.add(permission)
+
+        self.objects = (character, )

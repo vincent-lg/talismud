@@ -162,6 +162,7 @@ class RoomDocument(Document):
         else:
             room.title = self.cleaned.title
 
+        self.objects = (room, )
         room.x = self.cleaned.x
         room.y = self.cleaned.y
         room.z = self.cleaned.z
@@ -171,9 +172,14 @@ class RoomDocument(Document):
             room.description.set(description)
 
         # Add the exits, if possible
+        objects = [room]
         for exit in list(self.cleaned.exits):
             try:
                 exit.apply()
             except DelayMe:
                 self.cleaned.exits.remove(exit)
                 raise DelayDocument(exit)
+            else:
+                objects.extend(exit.objects)
+
+        self.objects = tuple(objects)

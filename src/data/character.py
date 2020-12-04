@@ -40,8 +40,8 @@ from command.stack import CommandStack
 from data.base import db, PicklableEntity
 from data.decorators import lazy_property
 from data.handlers import (
-        AttributeHandler, LocatorHandler, PermissionHandler,
-        NameHandler, TagHandler)
+        AttributeHandler, BlueprintHandler, LocatorHandler,
+        PermissionHandler, NameHandler, TagHandler)
 from scripting.variable import VariableFormatter
 import settings
 
@@ -62,6 +62,10 @@ class Character(PicklableEntity, db.Entity):
     @lazy_property
     def tags(self):
         return TagHandler(self)
+
+    @lazy_property
+    def blueprints(self):
+        return BlueprintHandler(self)
 
     @lazy_property
     def locator(self):

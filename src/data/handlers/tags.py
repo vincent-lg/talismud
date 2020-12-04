@@ -276,6 +276,11 @@ class TagLink(db.Entity):
     object_id = Required(int)
     composite_index(object_class, object_id, tag)
 
+    @property
+    def str_id(self):
+        """Return the string identifier (object_class:object_id)."""
+        return f"{self.object_class}:{self.object_id}"
+
     def __repr__(self):
         tag = self.tag
         category = tag.category

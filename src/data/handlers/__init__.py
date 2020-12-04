@@ -30,6 +30,7 @@
 """Handlers for data."""
 
 from data.handlers.attributes import AttributeHandler
+from data.handlers.blueprints import BlueprintHandler
 from data.handlers.description import DescriptionHandler
 from data.handlers.location import LocatorHandler
 from data.handlers.name import NameHandler

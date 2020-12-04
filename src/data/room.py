@@ -34,7 +34,9 @@ from pony.orm import Optional, Required, Set
 from data.base import db, PicklableEntity
 from data.decorators import lazy_property
 from data.exit import ExitHandler
-from data.handlers import AttributeHandler, DescriptionHandler, LocatorHandler
+from data.handlers import (
+        AttributeHandler, BlueprintHandler, DescriptionHandler,
+        LocatorHandler)
 
 class Room(PicklableEntity, db.Entity):
 
@@ -51,6 +53,10 @@ class Room(PicklableEntity, db.Entity):
     @lazy_property
     def db(self):
         return AttributeHandler(self)
+
+    @lazy_property
+    def blueprints(self):
+        return BlueprintHandler(self)
 
     @lazy_property
     def exits(self):

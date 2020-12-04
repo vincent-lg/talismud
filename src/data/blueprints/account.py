@@ -88,11 +88,17 @@ class AccountDocument(Document):
         else:
             account.hashed_password = password
             account.email = email
+        self.objects = (account, )
 
         # Add the characters
+        objects = [account]
         for character in list(self.cleaned.characters):
             try:
                 character.apply()
             except DelayMe:
                 self.cleaned.characters.remove(character)
                 raise DelayDocument(character)
+            else:
+                objects.extend(character.objects)
+
+        self.objects = tuple(objects)
