@@ -39,7 +39,7 @@ A parser is responsible for reading and writing data to the file
 system, or another storage system, in a specific format.  Read the
 parser's abstract class below.  To create a new parser, add
 a class (preferably in its own module), inheriting from the
-below Parser class and edit new blueprints (see
+below `AbstractParser` class and edit new blueprints (see
 the setting "BLUEPRINT_PARSER" to change the default parser and
 use your new one).
 
@@ -85,8 +85,8 @@ class AbstractParser(metaclass=ABCMeta):
     and set them in the settings file.
 
     Methods to override:
-        __init__(options as keyword arguments)
-        collect_blueprints(): return a list of blueprints the parser
+        __init__(records, options as keyword arguments)
+        retrieve_blueprints(): return a list of blueprints the parser
                 can find.
         store_blueprint: store a single blueprint.
         store_blueprints: store all the found blueprints.
@@ -105,7 +105,7 @@ class AbstractParser(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def __init__(self, **kwargs):
+    def __init__(self, record, **kwargs):
         """
         Create a parser.
 
@@ -116,6 +116,14 @@ class AbstractParser(metaclass=ABCMeta):
         manner, rather than reading them from kwargs (see
         'data.blueprints.parser.yaml' for an example).
 
+        Args:
+            records (dict): the dictionary {record.name: record object}
+                    of all `BlueprintRecord` objects found in the
+                    database.  This entity is used to keep track
+                    of changes and to avoid applying blueprints that
+                    haven't changed.  How to handle blueprint records
+                    is left to the parser.
+
         """
         pass
 
@@ -125,7 +133,9 @@ class AbstractParser(metaclass=ABCMeta):
         Return a list of blueprints the parser can read and build.
 
         Blueprints are to be read entirely at this point.  A list
-        of blueprints is returned.
+        of blueprints is returned.  Remember, retrieving and applying
+        are two different things: reading the list of blueprints
+        shouldn't apply any of them.
 
         """
         pass
@@ -136,7 +146,8 @@ class AbstractParser(metaclass=ABCMeta):
         Apply blueprints selectively.
 
         This method should check that applying the blueprint is
-        expected and can interact with data.blueprint.Blueprint, which
+        expected and can interact with
+        `data.blueprints.record.BlueprintRecord`, which
         is a database table used to "remember" what blueprint
         was applied at what time.
 

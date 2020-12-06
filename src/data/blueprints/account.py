@@ -56,20 +56,34 @@ class AccountDocument(Document):
         "username": {
             "type": "str",
             "presence": "required",
+            "py_attr": "username",
         },
         "password": {
             "type": "str_or_bytes",
             "presence": "required",
+            "py_attr": "hashed_password",
         },
         "email": {
             "type": "str",
             "presence": "optional",
+            "py_attr": "email",
         },
         "characters": {
             "type": "subset",
             "document_type": "character",
+            "py_attr": "characters",
         },
     }
+
+    def register(self):
+        """Register the object for the blueprint."""
+        self.object = None
+        if (account := db.Account.get(username=self.cleaned.username)):
+            self.object = account
+            self.blueprint.objects[account] = self
+            return (account, )
+
+        return ()
 
     def apply(self):
         """Apply the document, create or update an account."""
@@ -81,24 +95,20 @@ class AccountDocument(Document):
         if isinstance(password, str):
             password = db.Account.hash_password(password)
 
-        account = db.Account.get(username=username)
+        account = self.object
         if account is None:
             account = db.Account(username=username,
                     hashed_password=password, email=email)
+            account.blueprints.add(self.blueprint.name)
         else:
             account.hashed_password = password
             account.email = email
-        self.objects = (account, )
+        self.blueprint.objects[account] = self
 
         # Add the characters
-        objects = [account]
         for character in list(self.cleaned.characters):
             try:
                 character.apply()
             except DelayMe:
                 self.cleaned.characters.remove(character)
                 raise DelayDocument(character)
-            else:
-                objects.extend(character.objects)
-
-        self.objects = tuple(objects)

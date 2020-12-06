@@ -29,6 +29,8 @@
 
 """Room entity."""
 
+import asyncio
+
 from pony.orm import Optional, Required, Set
 
 from data.base import db, PicklableEntity
@@ -83,6 +85,12 @@ class Room(PicklableEntity, db.Entity):
     def contents(self):
         return self.locator.contents()
 
+    # Database hooks
+    def after_update(self):
+        """Save in the room blueprints, if any."""
+        loop = asyncio.get_event_loop()
+        loop.call_soon(self.blueprints.save)
+
     def look(self, character: 'db.Character'):
         """
         The character wants to look at this room.
@@ -96,7 +104,7 @@ class Room(PicklableEntity, db.Entity):
         if exits:
             exits = "Obvious exits: " + ", ".join([ex.name_for(self) for ex in exits])
         else:
-            exits = "Obvious exits: well, none"
+            exits = "There is no obvious exit."
 
         lines = [
             self.title,

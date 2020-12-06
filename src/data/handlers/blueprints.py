@@ -34,35 +34,20 @@ though some additional methods are implemented.
 
 """
 
-from datetime import datetime
-from importlib import import_module
 import typing as ty
 
-from logbook import FileHandler, Logger
-from pony.orm import PrimaryKey, Required, commit, select
+from pony.orm import commit, select
 
-from data.base import db, PicklableEntity
-from data.blueprints.blueprint import Blueprint as BP
-from data.blueprints.parser.base import AbstractParser
+from data.base import db
 from data.handlers.tags import TagHandler
 import settings
-
-# Logger
-logger = Logger()
-file_handler = FileHandler("logs/blueprints.log",
-        encoding="utf-8", level="DEBUG", delay=True)
-file_handler.format_string = (
-        "{record.time:%Y-%m-%d %H:%M:%S.%f%z} [{record.level_name}] "
-        "{record.message}"
-)
-logger.handlers.append(file_handler)
 
 class BlueprintHandler(TagHandler):
 
     """Blueprint handler, using a tag handler behind the scenes."""
 
     subset = "blueprint"
-    blueprints = {} # {unique name: blueprint object}
+    current_parser = None
 
     def get(self, *others):
         """
@@ -82,8 +67,31 @@ class BlueprintHandler(TagHandler):
                 for obj in objects]))
         query = self._get_search_query()
         query = select(link for link in db.TagLink if link.tag in query and link.str_id in str_ids)
-        print(query.get_sql())
-        return tuple(query)
+
+        # Get the blueprints
+        blueprints = set()
+        for link in query:
+            blueprint = type(self).current_parser.blueprints.get(link.tag.name)
+            if blueprint is None:
+                raise ValueError(f"cannot get the blueprint of name {link.tag.name}")
+
+            blueprints.add(blueprint)
+
+        return tuple(blueprints)
+
+    def get_document(self):
+        """
+        Return the document for this object, if any is stored.
+
+        Returns:
+            document (Document or None): the document for this object.
+
+        """
+        blueprints = self.get()
+        if blueprints:
+            return blueprints[0].objects.get(self._TagHandler__owner)
+
+        return None
 
     def save(self, *others):
         """
@@ -116,8 +124,16 @@ class BlueprintHandler(TagHandler):
 
         """
         blueprints = self.get(*others)
-        query = self._get_search_query()
-        objects = [self.__owner]
+        objects = (self._TagHandler__owner, ) + tuple(others)
+
+        for blueprint in blueprints:
+            with blueprint:
+                for obj in objects:
+                    blueprint.update_document_from_object(obj)
+
+            if blueprint.modified:
+                type(self).current_parser.store_blueprint(blueprint)
+
     @classmethod
     def search(cls, name: ty.Optional[str] = None,
             category: ty.Optional[str] = None) -> tuple:
@@ -136,40 +152,3 @@ class BlueprintHandler(TagHandler):
 
         """
         return super().search(name, category)
-
-
-class Blueprint(PicklableEntity, db.Entity):
-
-    """
-    Blueprint entity, complement to the blueprint tag.
-
-    A blueprint is a file in YML format, stored in the blueprints/
-    directory.  Each file is applied when the game starts, but the
-    file path and their modification date is stored in the database,
-    so that they're not applied unless they're modified again.
-
-    """
-
-    name = PrimaryKey(str)
-    modified = Required(datetime)
-
-    @classmethod
-    def apply_all(cls):
-        """Apply all applicable blueprints."""
-        parser_module = settings.BLUEPRINT_PARSER
-        module = import_module(f"data.blueprints.parser.{parser_module}")
-        parsers = [obj for obj in module.__dict__.values() if
-                isinstance(obj, type) and issubclass(obj, AbstractParser)
-                and obj is not AbstractParser]
-        if len(parsers) != 1:
-            raise ValueError(f"ambiguous parser in {module}: {parsers}")
-
-        parser = parsers[0]
-        # Get settings
-        options = {key[10:].lower(): value for
-                key, value in settings.__dict__.items() if key.startswith(
-                "BLUEPRINT_")}
-        options.pop("parser")
-        parser = parser(**options)
-        parser.retrieve_blueprints()
-        parser.apply()

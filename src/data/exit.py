@@ -29,6 +29,7 @@
 
 """Exit entity, to connect rooms bidirectionally."""
 
+from enum import Enum, auto
 import typing as ty
 
 from pony.orm import Optional, Required, Set
@@ -114,6 +115,27 @@ class Exit(PicklableEntity, db.Entity):
                 f"{room} is neither origin not destination of this exit"
         )
 
+    def back_for(self, room):
+        """
+        Return the exit's back name for this room.
+
+        The exit back name will vary: if the given room is the origin, return
+        `back`.  If the given room is `to`, return `name`.  Otherwise,
+        raise a Valueerror exception.
+
+        Args:
+            room (Room): the origin or destination room for this exit.
+
+        """
+        if self.origin is room:
+            return self.back
+        elif self.to is room:
+            return self.name
+
+        raise ValueError(
+                f"{room} is neither origin not destination of this exit"
+        )
+
     def destination_for(self, room):
         """Return the destination for the given room."""
         if self.origin is room:
@@ -173,9 +195,130 @@ class ExitHandler:
 
         return repr(reprs)
 
+    def __iter__(self):
+        return iter(tuple(Exit.of(self.room)))
+
     def all(self):
         """Return all exits."""
         return list(Exit.of(self.room))
+
+    def has(self, name: str) -> bool:
+        """
+        Return whether the current room has an exit named like this.
+
+        Args:
+            name (str): name of the exit to check.
+
+        The comparison is performed case-insensitive.
+
+        Returns:
+            exist (bool): whether an exit with this name exists.
+
+        """
+        name = name.lower()
+        for exit in self:
+            if exit.name == name:
+                return True
+
+        return False
+
+    def link_to(self, destination: 'db.Room', name: str,
+            back: ty.Optional[str] = None, barcode: ty.Optional[str] = "",
+            ) -> ty.Optional['db.Exit']:
+        """
+        Link the owner room to the specified destination.
+
+        Both rooms have to exist for this method to work.  Neither
+        room should be connected, it would break the exit system
+        if more than one exit linked two rooms.
+
+        Args:
+            destination (Room): the exit destination.
+            name (str): the exit name.
+            back (str, optional): the name of the back exit, if any.
+            barcode (str, optional): the exit barcode, if any.
+
+        Returns:
+            exit (Exit or None): the exit if created, None if error.
+
+        """
+        origin = self.room
+        if Exit.between(origin, destination):
+            return
+
+        # Create an exit connected origin to destination
+        return db.Exit(origin=origin, to=destination,
+                name=name, back=back, barcode=barcode)
+
+    def create_room(self, direction: 'Direction', name: str,
+            destination: str, title: str, back: ty.Optional[str] = None,
+            barcode: ty.Optional[str] = "") -> 'db.Exit':
+        """
+        Create a room in the specified direction, linking it with an exit.
+
+        This method is usually the one called to add rooms
+        and exits with no real difficulty.  This would fail for several
+        reasons, raise as a `NewRoomError` subclass.
+
+        Args:
+            direction (DIRECTION): a member of DIRECTION, like
+                    DIRECTION.SOUTH or DIRECTION.UP.  This is
+                    the exit direction and the name of the exit
+                    is specified in the next argument.
+            name (str): the exit name.
+            destination (str): the destination's future barcode.
+                    This will be the new room's barcode and thus,
+                    shouldn't be used already.
+            title (str): the new room's title.
+            back (str, optional): the name of the exit
+                    from destination to origin (the back exit).
+                    If not set, don't create a back exit.
+            barcode (str, optional): the exit's barcode, a way
+                    to uniquely identify the exit.  It shouldn't be
+                    used by another exit.
+
+        Returns:
+            exit (Exit): the newly-created exit, if successful.
+
+        Raises:
+            A subclass of `NewRoomError` to inform the user of several
+            possible errors.  This should be intercepted (in a
+            command, probably) and handled to display the error
+            in a user-friendlier way.
+
+            Possible errors:
+                CoordinatesInUse(x, y, z, room): these coordinates are
+                        in use, can't create the destination room.
+                ExitNameInUse(room, name): this exit name is already
+                        in use in this room, cannot create it.
+
+        """
+        origin = self.room
+        x, y, z = origin.x, origin.y, origin.z
+
+        # If the coordinates are valid, check the new coordinates
+        if all(value is not None for value in (x, y, z)):
+            x, y, z = direction.shift(x, y, z)
+
+        # Check fthat the coordinates are free
+        if (dest := db.Room.get(x=x, y=y, z=z)):
+            raise CoordinatesInUse(x, y, z, dest)
+
+        # Check whether there is no exit of this name yet
+        if self.has(name):
+            raise ExitNameInUse(room, name)
+
+        # Create a room with these coordinates
+        destination = db.Room(barcode=destination, title=title, x=x, y=y, z=z)
+
+        # Copy the current blueprints to the new room
+        for blueprint in origin.blueprints.get():
+            destination.blueprints.add(blueprint.name)
+
+        exit = self.link_to(destination, name=name, back=back,
+                barcode=barcode)
+        origin.blueprints.save(destination)
+        return exit
 
     def match(self, character: db.Character, name: str) -> ty.Optional[Exit]:
         """
@@ -195,3 +338,104 @@ class ExitHandler:
                 return exit
 
         return None # Explicit is better than implicit
+
+
+class Direction(Enum):
+
+    """Enumeration listing possible exit directions."""
+
+    UNSET = auto()
+    EAST = auto()
+    SOUTHEAST = auto()
+    SOUTH = auto()
+    SOUTHWEST = auto()
+    WEST = auto()
+    NORTHWEST = auto()
+    NORTH = auto()
+    NORTHEAST = auto()
+    DOWN = auto()
+    UP = auto()
+
+    def shift(self, x: int, y: int, z: int) -> ty.Tuple[int, int, int]:
+        """
+        Shift the coordinates according to the direction.
+
+        Args:
+            x (int): the original X cooridnates.
+            y (int): the original Y coordinates.
+            z (int): the original Z coordinates.
+
+        Returns:
+            x, y, z (int, int int): the shifted coordinates.
+
+        Example:
+
+            >>> x, y, z = 0, 0, 0
+            >>> Direction.EAST.shift(x, y, z)
+            (1, 0, 0) # x has shifted (x + 1)
+
+        """
+        if self is Direction.UNSET:
+            raise ValueError("an unset exit direction cannot shift")
+        elif self is Direction.EAST:
+            x += 1
+        elif self is Direction.SOUTHEAST:
+            x += 1
+            y -= 1
+        elif self is Direction.SOUTH:
+            y -= 1
+        elif self is Direction.SOUTHWEST:
+            x -= 1
+            y -= 1
+        elif self is Direction.WEST:
+            x -= 1
+        elif self is Direction.NORTHWEST:
+            x -= 1
+            y += 1
+        elif self is Direction.NORTH:
+            y += 1
+        elif self is Direction.NORTHEAST:
+            x += 1
+            y += 1
+        elif self is Direction.DOWN:
+            z -= 1
+        elif self is Direction.UP:
+            z += 1
+        else:
+            raise ValueError("unknown exit direction")
+
+        return x, y, z
+
+
+class NewRoomError(Exception):
+
+    """Parent exception for new room errors."""
+
+    pass
+
+
+class CoordinatesInUse(NewRoomError):
+
+    """Exception raised when the coordinates already are in use."""
+
+    def __init__(self, x, y, z, room):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.room = room
+
+    def __str__(self):
+        return (f"coordinates X={self.x}, Y={self.y}, Z={self.z} "
+                f"already are used by {self.room}")
+
+
+class ExitNameInUse(NewRoomError):
+
+    """The specified exit name already is in use."""
+
+    def __init__(self, room, name):
+        self.room = room
+        self.name = name
+
+    def __str__(self):
+        return f"the exit {self.exit!r} already exists in {self.room}"

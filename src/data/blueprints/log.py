@@ -27,37 +27,15 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Permission handler, to handle object permissions."""
+"""Logger for blueprints."""
 
-import typing as ty
+from logbook import FileHandler, Logger
 
-from data.handlers.tags import TagHandler
-
-class PermissionHandler(TagHandler):
-
-    """Permission handler, using a tag handler behind the scenes."""
-
-    subset = "permission"
-
-    def get(self):
-        """Return the permissions in a space-separated string."""
-        return " ".join([link.tag.name for link in self])
-
-    @classmethod
-    def search(cls, name: ty.Optional[str] = None,
-            category: ty.Optional[str] = None) -> tuple:
-        """
-        Search a given permission, return a list of objects maching it.
-
-        Args:
-            name (str, optional): the permission name.
-            category (str, optional): the name of the category.
-
-        Returns:
-            objects (list): a list of objects matching this permission.
-
-        Note:
-            `name` or `category` should be specified.
-
-        """
-        return super().search(name, category)
+logger = Logger()
+file_handler = FileHandler("logs/blueprints.log",
+        encoding="utf-8", level="DEBUG", delay=True)
+file_handler.format_string = (
+        "{record.time:%Y-%m-%d %H:%M:%S.%f%z} [{record.level_name}] "
+        "{record.message}"
+)
+logger.handlers.append(file_handler)

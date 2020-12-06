@@ -44,16 +44,19 @@ class CharacterDocument(Document):
             "type": "str",
             "max_len": 128,
             "presence": "required",
+            "py_attr": "name",
         },
         "account": {
             "type": "str",
             "max_len": 64,
             "presence": "required",
+            "py_attr": "account.username",
         },
         "permissions": {
             "type": "str",
             "max_len": 64,
             "presence": "optional",
+            "py_attr": "permissions.get",
         },
     }
 

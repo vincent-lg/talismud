@@ -155,8 +155,48 @@ class Document:
                 value = getattr(self, f"default_{def_type}")()
                 setattr(self.cleaned, key, value)
 
+    def fill_from_object(self, obj: Any,
+            section: Optional[Dict[str, Any]] = None):
+        """
+        Fill the current document from an object.
+
+        Args:
+            obj (Any): an object, stored in the database.
+            section (optional): a dictionary of the sections,
+                    only used in subsets.
+
+        """
+        section = section or dict(type(self).fields)
+        for key, definition in section.items():
+            definition = dict(definition)
+            def_type = definition.pop("type", None)
+            if def_type is None:
+                raise ValueError(f"the definition of {key!r} has no type")
+
+            # Get the value
+            py_attr = definition.pop("py_attr", None)
+
+            if py_attr is None:
+                raise ValueError(f"py_attr from field {key} doesn't exist")
+
+            first, *others = py_attr.split(".")
+            value = getattr(obj, first)
+            for other in others:
+                value = getattr(value, other)
+
+            if callable(value):
+                value = value()
+
+            if def_type == "subset":
+                sub_docs = []
+                for sub_obj in value:
+                    sub_docs.append(create_from_object(self.blueprint, sub_obj))
+                value = sub_docs
+
+            setattr(self.cleaned, key, value)
+
     def is_proper_str(self, value, document, max_len=None,
-            presence="required"):
+            presence="required", **kwargs):
         """Parse a simple string."""
         if presence == "required":
             if value is NOT_SET:
@@ -168,7 +208,7 @@ class Document:
         raise ValueError(f"presence {presence} not known")
 
     def is_proper_str_or_bytes(self, value, document, max_len=None,
-            presence="required"):
+            presence="required", **kwargs):
         """Parse a string or byte-string."""
         if presence == "required":
             if value is NOT_SET:
@@ -191,7 +231,8 @@ class Document:
     def default_subset(self):
         return []
 
-    def is_proper_int(self, value, document, presence="required"):
+    def is_proper_int(self, value, document, presence="required",
+            **kwargs):
         """Parse an integer."""
         if presence == "required":
             if value is NOT_SET:
@@ -210,7 +251,8 @@ class Document:
 
         raise ValueError(f"presence {presence} not known")
 
-    def is_proper_subset(self, value, document, document_type, number="any"):
+    def is_proper_subset(self, value, document, document_type, number="any",
+            **kwargs):
         """Is it a proper subset?"""
         if document_type not in DOCUMENT_TYPES:
             raise ValueError(f"{document!r} isn't defined")
@@ -265,6 +307,42 @@ def create(blueprint, document: Dict[str, Any]):
 
     doc = DocClass(blueprint)
     doc.fill(document)
+    return doc
+
+def create_from_object(blueprint, obj: Any):
+    """
+    Create a document from an object.
+
+    The object's class is used to find out the proper document.
+    The document fields are looked for to build
+    the final document.
+
+    Args:
+        blueprint (Blueprint): the parent blueprint.
+        obj (Any): any object stored in database.
+
+    Returns:
+        document (Document): the created document.
+
+    """
+    document_type = type(obj).__name__.lower()
+    if document_type not in DOCUMENT_TYPES:
+        raise ValueError(f"object {obj} of document type "
+                f"{document_type} doesn't seem to have a record "
+                "in the document types")
+
+    document_module, document_class = DOCUMENT_TYPES[
+            document_type].rsplit(".", 1)
+    module = import_module(document_module)
+    DocClass = getattr(module, document_class, None)
+    if DocClass is None:
+        raise ValueError(
+                f"cannot find the class {document_class} "
+                f"in {document_module}"
+        )
+
+    doc = DocClass(blueprint)
+    doc.fill_from_object(obj)
     return doc
 
 class Namespace:

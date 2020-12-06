@@ -40,7 +40,7 @@ report back to whatever function called it.
 
 from typing import Any, Dict, Sequence
 
-from data.blueprints.document import create
+from data.blueprints.document import create, create_from_object
 from data.blueprints.exceptions import DelayMe, DelayDocument
 
 class Blueprint:
@@ -52,6 +52,8 @@ class Blueprint:
         self.documents = documents
         self.delayed = []
         self.applied = 0
+        self.modified = False
+        self.objects = {}
 
         # Document types
         self.rooms = {} # {barcode: document}
@@ -74,6 +76,13 @@ class Blueprint:
 
         return dictionaries
 
+    def __enter__(self):
+        self.modified = False
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
+
     def create_document(self, document: Dict[str, Any]):
         """
         Create and add the document to this blueprint.
@@ -94,6 +103,47 @@ class Blueprint:
 
         return document
 
+    def create_document_from_object(self, obj: Any):
+        """
+        Create and add the document to this blueprint, built from an object.
+
+        Args:
+            obj (Any): the object from which to create the document.
+
+        Returns:
+            document (Document): the created document.
+
+        """
+        document = create_from_object(self, obj)
+
+        # Action based on type
+        method = getattr(self, f"handle_{document.doc_type}", None)
+        if method:
+            method(document)
+
+        return document
+
+    def update_document_from_object(self, obj: Any):
+        """
+        Update the document linked to an object.
+
+        Args:
+            obj (Object): the object to update.
+
+        """
+        document = self.objects.get(obj)
+        if document is None:
+            self.modified = True
+            document = self.create_document_from_object(obj)
+            self.documents.append(document)
+            self.objects[obj] = document
+        else:
+            old = document.dictionary
+            document.fill_from_object(obj)
+            new = document.dictionary
+            if old != new:
+                self.modified = True
+
     def handle_room(self, document):
         """Handle the room document."""
         with document.cleaned as room:
@@ -102,6 +152,15 @@ class Blueprint:
                     room.x, room.y, room.z)):
                 x, y, z = room.x, room.y, room.z
                 self.coords[(x, y, z)] = document
+
+    def register(self):
+        """Register all stored documents."""
+        objects = set()
+        for document in self.documents:
+            for obj in document.register():
+                objects.add(obj)
+
+        return tuple(objects)
 
     def apply(self):
         """

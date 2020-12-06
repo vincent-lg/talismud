@@ -35,6 +35,8 @@ from data.base import db
 from data.blueprints.document import Document
 from data.blueprints.exceptions import BlueprintAlert, DelayMe, DelayDocument
 
+import settings
+
 class RoomDocument(Document):
 
     """Room document to add rooms in blueprints."""
@@ -73,6 +75,29 @@ class RoomDocument(Document):
             "document_type": "exit",
         },
     }
+
+    def fill_from_object(self, room):
+        """Draw the document from an object."""
+        self.cleaned.barcode = room.barcode
+        self.cleaned.title = room.title
+        self.cleaned.x = room.x
+        self.cleaned.y = room.y
+        self.cleaned.z = room.z
+        self.cleaned.description = room.description.text
+        self.cleaned.exits = []
+
+        for exit in room.exits:
+            definition = {}
+            definition["name"] = exit.name_for(room)
+            if (back := exit.back_for(room)):
+                definition["back"] = back
+            definition["origin"] = room.barcode
+            definition["destination"] = exit.destination_for(room).barcode
+
+            if (barcode := exit.barcode):
+                definition["barcode"] = barcode
+
+            self.cleaned.exits.append(definition)
 
     def add_neighbor(self, barcode: str, title: str, x: Optional[int] = None,
             y: Optional[int] = None, z: Optional[int] = None,
@@ -153,16 +178,39 @@ class RoomDocument(Document):
             self.blueprint.documents.append(back_exit)
             new_room.cleaned.exits.append(back_exit)
 
+    def register(self):
+        """Register the object for the blueprint."""
+        self.object = None
+        if (room := db.Room.get(barcode=self.cleaned.barcode)):
+            self.object = room
+            self.blueprint.objects[room] = self
+            if room.barcode in (settings.START_ROOM, settings.RETURN_ROOM):
+                # These rooms have already been created automatically,
+                # but make sure we add their blueprint tags
+                room.blueprints.add(self.blueprint.name)
+            return (room, )
+
+        return ()
+
     def apply(self):
         """Apply the document, create a room."""
-        room = db.Room.get(barcode=self.cleaned.barcode)
+        room = self.object
+        add_tags = False
         if room is None:
             room = db.Room(barcode=self.cleaned.barcode,
                     title=self.cleaned.title)
+            add_tags = True
+        elif room.barcode in (settings.START_ROOM, settings.RETURN_ROOM):
+            # These rooms have already been created automatically,
+            # but make sure we add their blueprint tags
+            add_tags = True
         else:
             room.title = self.cleaned.title
 
-        self.objects = (room, )
+        if add_tags:
+            room.blueprints.add(self.blueprint.name)
+
+        self.blueprint.objects[room] = self
         room.x = self.cleaned.x
         room.y = self.cleaned.y
         room.z = self.cleaned.z
@@ -172,14 +220,9 @@ class RoomDocument(Document):
             room.description.set(description)
 
         # Add the exits, if possible
-        objects = [room]
         for exit in list(self.cleaned.exits):
             try:
                 exit.apply()
             except DelayMe:
                 self.cleaned.exits.remove(exit)
                 raise DelayDocument(exit)
-            else:
-                objects.extend(exit.objects)
-
-        self.objects = tuple(objects)

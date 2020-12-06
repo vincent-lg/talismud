@@ -50,9 +50,10 @@ from typing import List, Optional
 import yaml
 
 from data.base import db
-from data.handlers.blueprints import logger
 from data.blueprints.blueprint import Blueprint
+from data.blueprints.log import logger
 from data.blueprints.parser.base import AbstractParser
+from data.handlers.blueprints import BlueprintHandler
 
 def str_presenter(dumper, data):
     """Force using the | format with multiline strings."""
@@ -74,14 +75,15 @@ class YAMLParser(AbstractParser):
 
     Options:
         directory (str): the location of the YML blueprint files.
-                         Default to 'blueprints'.
+                         Default to 'blueprints/'.
         backup (bool): whether to use a backup mode.
                        Default to `true`.
 
     """
 
-    def __init__(self, directory: Optional[str] = "blueprints",
+    def __init__(self, records: dict, directory: Optional[str] = "blueprints",
             backup: Optional[bool] = True):
+        self.records = records
         directory = str(directory)
         if Path(directory).is_absolute():
             self.directory = Path(directory)
@@ -90,6 +92,7 @@ class YAMLParser(AbstractParser):
         self.backup = backup
         self.blueprints = {}
         self.paths = {}
+        BlueprintHandler.current_parser = self
 
     def retrieve_blueprints(self) -> List[Blueprint]:
         """
@@ -110,7 +113,13 @@ class YAMLParser(AbstractParser):
             # Read the file
             with path.open("r", encoding="utf-8") as file:
                 documents = yaml.safe_load_all(file.read())
-                blueprint = Blueprint(str(relative), list(documents))
+                parent = relative.parent
+                if str(parent) == ".":
+                    unique_name = str(relative.stem)
+                else:
+                    unique_name = str(parent / relative.stem)
+
+                blueprint = Blueprint(unique_name, list(documents))
 
             num_docs = len(blueprint.documents)
             logger.info(
@@ -118,7 +127,7 @@ class YAMLParser(AbstractParser):
                 f"document{'s' if num_docs > 1 else ''} "
                 f"from {relative}"
             )
-            self.blueprints[relative] = blueprint
+            self.blueprints[unique_name] = blueprint
             self.paths[blueprint] = relative
 
     def apply(self):
@@ -131,14 +140,15 @@ class YAMLParser(AbstractParser):
         was applied at what time.
 
         """
-        for relative, blueprint in self.blueprints.items():
+        for blueprint, relative in self.paths.items():
+            blueprint.register()
             path = self.directory / relative
-            record = db.Blueprint.get(name=str(relative))
+            record = self.records.get(blueprint.name)
             last_modified = datetime.fromtimestamp(
                     path.stat().st_mtime)
             if record is None:
                 should_apply = True
-                record = db.Blueprint(name=str(relative),
+                record = db.BlueprintRecord(name=blueprint.name,
                         modified=last_modified)
             else:
                 should_apply = last_modified > record.modified
