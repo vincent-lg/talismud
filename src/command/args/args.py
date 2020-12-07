@@ -110,6 +110,7 @@ class CommandArgs:
         dest = dest or arg_type
         argument = arg_class(dest, optional=optional, **kwargs)
         self.arguments.append(argument)
+        return argument
 
     def parse(self, arguments: str) -> Union[Namespace, ArgumentError]:
         """
@@ -167,6 +168,10 @@ class CommandArgs:
             if not arg.in_namespace:
                 continue
 
-            setattr(namespace, arg.dest, arguments[result.begin:result.end])
+            custom = getattr(arg, "add_to_namespace", None)
+            if custom:
+                custom(result, namespace)
+            else:
+                setattr(namespace, arg.dest, arguments[result.begin:result.end])
 
         return namespace
