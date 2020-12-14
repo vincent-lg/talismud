@@ -1,3 +1,5 @@
+from io import StringIO
+import sys
 import traceback
 
 from bui import Window
@@ -5,11 +7,16 @@ from bui import Window
 from service.launcher import MUDOp, MUDStatus
 from ui.builder import BuilderWindow
 
+# Remove stdout and stderr (logging)
+out = StringIO()
+sys.stdout = out
+sys.stderr = out
+
 class TalismudWindow(Window):
 
     """TalisMUD window, powered bh the Blind User Interface."""
 
-    def on_init(self):
+    async def on_init_status(self):
         """The window is ready to be displayed."""
         self["status"].value = "Getting MUD status..."
         self.schedule(self.check_status())

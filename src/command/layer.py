@@ -29,12 +29,17 @@
 
 """Abstract class for command layers."""
 
+from collections import defaultdict
 from importlib import import_module
 from pathlib import Path
 from typing import Optional
 
 from command.base import Command, logger
+from command.log import logger
 from command.special.exit import ExitCommand
+
+# Constants
+COMMANDS_BY_LAYERS = defaultdict(dict)
 
 class CommandLayer:
 
@@ -66,6 +71,38 @@ class CommandLayer:
         self.character = character
         self.commands = []
 
+    def __getstate__(self):
+        """Return what to pickle."""
+        to_save = dict(self.__dict__)
+        del to_save["commands"]
+        return to_save
+
+    def __setstate__(self, saved):
+        """Unpickle serialized layer."""
+        self.__dict__.update(saved)
+        layer = self.load(self.character)
+        self.commands = layer.commands
+
+    def handle_input(self, command: str) -> Optional[Command]:
+        """
+        Handle the user input in this layer.
+
+        By defaut, looks in the command layer's list of commands.
+        It is possible to override this behavior however, to handle
+        more custom commands (or even ignore the list of commands
+        in this command layer).
+
+        Args:
+            command (str): the entered command.
+
+        Returns:
+            command (Command or None): the processed command.
+                    Returning `None` means "not found, keep on
+                    exploring other command layers, if appropriate".
+
+        """
+        return self.find_command(command)
+
     def find_command(self, command: str) -> Optional[Command]:
         """
         Try to find the command based on its name.
@@ -93,7 +130,7 @@ class CommandLayer:
         for command in self.commands:
             aliases = command.alias
             if isinstance(aliases, str):
-                aliases = [aliases]
+                aliases = (aliases, )
 
             for sep in command.seps:
                 before, after = seps[sep]
@@ -105,14 +142,39 @@ class CommandLayer:
 
         return None
 
-    def cannot_find(self, command) -> str:
-        """Return the message to be displayed when the command cannot be found."""
+    def cannot_find(self, command: str) -> str:
+        """
+        Return the message to be displayed when the command cannot be found.
+
+        Args:
+            command (str): the entered command.
+
+        Returns:
+            message (str): the message to send to the character.
+
+        """
         return f"Cannot find the command '{command}'."
 
+    def load_commands(self):
+        """
+        Load the commands for this command layer.
+
+        Usually you don't need to override this in your dynamic command
+        layer.  However, if you want to add other, non-dynamic
+        commands to your command layer, you can do so here.
+        The added commands should find themselves in the list
+        (`self.commands`), and should inherit the `Command` class,
+        or be close enough (duck-typing).
+
+        """
+        self.commands = list(COMMANDS_BY_LAYERS.get(self.name, {}).values())
+
     @classmethod
-    def load(self, character):
+    def load(cls, character):
         """Load the command layer for this character."""
-        return cls(character)
+        layer = cls(character)
+        layer.load_commands()
+        return layer
 
 
 class StaticCommandLayer(CommandLayer):
@@ -134,32 +196,19 @@ class StaticCommandLayer(CommandLayer):
 
     name = "static"
 
-    def __getstate__(self):
-        """Return what to pickle."""
-        to_save = dict(self.__dict__)
-        del to_save["commands"]
-        return to_save
-
-    def __setstate__(self, saved):
-        """Unpickle serialized layer."""
-        self.__dict__.update(saved)
-        layer = self.load(self.character)
-        self.commands = layer.commands
-
-    def find_command(self, command: str) -> Optional[Command]:
+    def handle_input(self, command: str) -> Optional[Command]:
         """
         Test exits, then try to find the command based on its name.
 
-        Returns either the matching command, or `None` if not found.
-
         Args:
-            name (str): the command name.
+            command (str): the entered command.
 
         Returns:
-            match (Command or None): the matching command.
+            command (Command or None): the processed command.
+                    Returning `None` means "not found, keep on
+                    exploring other command layers, if appropriate".
 
         Note:
-            Overrides the `find_command` method of all layers.
             Test exits if there's a valid character before testing
             out commands.
 
@@ -170,22 +219,37 @@ class StaticCommandLayer(CommandLayer):
             if (exit := exits.match(character, command)):
                 return ExitCommand(character, exit)
 
-        return super().find_command(command)
+        return self.find_command(command)
 
-    @classmethod
-    def load(cls, character):
-        """Load the static layer from the file system."""
-        layer = cls(character)
-        parent_dir = Path("command")
-        exclude = [
-            parent_dir / "args",
-            parent_dir / "special",
-            parent_dir / "base.py",
-            parent_dir / "layer.py",
-            parent_dir / "stack.py",
-        ]
+def load_commands(raise_exception: Optional[bool] = False):
+    """
+    Load all commands dynamically.
 
-        for path in parent_dir.rglob("*.py"):
+    This should be called once, when the game starts.  It will actively load commands (in installed plugins, as well).
+
+    It will write the result in the `COMMANDS_BY_LAYERS` dicitonary,
+    where the key is the command layer name (like 'static') and
+    the value is a list of commands in this layer.
+
+    Args:
+        raise_exception (bool, optional): raise an exception in case of error.
+
+    """
+    parent_dir = Path("command")
+    exclude = [
+        parent_dir / "args",
+        parent_dir / "special",
+        parent_dir / "base.py",
+        parent_dir / "log.py",
+        parent_dir / "layer.py",
+        parent_dir / "stack.py",
+    ]
+
+    can_contain = (parent_dir, )
+    logger.debug("Loading the commands...")
+    how_many = 0
+    for parent in can_contain:
+        for path in parent.rglob("*.py"):
             if path in exclude:
                 continue
 
@@ -193,16 +257,43 @@ class StaticCommandLayer(CommandLayer):
                 continue
 
             if path.name.startswith("_"):
+                if path.stem != "__init__": # No point in logging __init__ files
+                    logger.debug(f"  The commands in {path} are ignored.")
                 continue
 
             # Assume this is a module containing a command
+            relative = path.relative_to(parent)
             pypath = ".".join(path.parts)[:-3]
-            module = import_module(pypath)
+
+            # Try to import
+            try:
+                module = import_module(pypath)
+            except Exception:
+                logger.exception("  An error occurred when "
+                        f"importing {pypath}")
+                if raise_exception:
+                    raise
+
+                continue
 
             # Explore the module for command classes
+            cmds_in_module = 0
             for key, value in module.__dict__.items():
                 if value is not Command and isinstance(value,
                         type) and issubclass(value, Command):
-                    command = value.extrapolate(path)
-                    layer.commands.append(command)
-        return layer
+                    command = value
+                    command.extrapolate(path)
+                    COMMANDS_BY_LAYERS[command.layer][command.name] = command
+                    logger.debug(f"  Succesfully loaded "
+                            f"{command.__module__}.{command.__name__} "
+                            f"(layer={command.layer})")
+                    cmds_in_module += 1
+                    how_many += 1
+
+            if cmds_in_module == 0:
+                logger.warning("  No command was found in "
+                        f"the {pypath} module")
+
+        s = "s" if how_many > 1 else ""
+        were = "were" if how_many > 1 else "was"
+        logger.debug(f"{how_many} command{s} {were} succesfully loaded")

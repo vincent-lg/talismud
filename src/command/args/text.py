@@ -31,7 +31,7 @@
 
 from typing import Optional, Union
 
-from command.args.base import ArgSpace, Argument, ArgumentError, Result
+from command.args.base import ArgSpace, Argument
 
 class Text(Argument):
 
@@ -41,25 +41,5 @@ class Text(Argument):
     space = ArgSpace.UNKNOWN
     in_namespace = True
 
-    def __init__(self, dest, optional=False):
-        super().__init__(dest, optional=optional)
-
     def __repr__(self):
         return "<Text arg>"
-
-    def parse(self, string: str, begin: int = 0,
-            end: Optional[int] = None) -> Union[Result, ArgumentError]:
-        """
-        Parse the argument.
-
-        Args:
-            string (str): the string to parse.
-            begin (int): the beginning of the string to parse.
-            end (int, optional): the end of the string to parse.
-
-        Returns:
-            result (Result or ArgumentError).
-
-        """
-        end = end or len(string)
-        return Result(begin=begin, end=end, string=string)

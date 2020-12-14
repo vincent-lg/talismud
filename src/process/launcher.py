@@ -48,6 +48,12 @@ sub_shell = subparsers.add_parser("shell", help="open a Python console")
 sub_shell.set_defaults(action="shell")
 sub_script = subparsers.add_parser("script", help="open a scripting console")
 sub_script.set_defaults(action="script")
+sub_test = subparsers.add_parser("test", help="run TalisMUD tests")
+sub_test.set_defaults(action="test")
+sub_cmd = subparsers.add_parser("command", help="examine TalisMUD commands")
+sub_cmd.set_defaults(action="command")
+sub_cmd.add_argument("filters", nargs="*",
+        help="Optional filters (layers or commands))")
 
 class Launcher(Process):
 
@@ -99,6 +105,10 @@ class Launcher(Process):
             await launcher.action_shell()
         elif args.action == "script":
             await launcher.action_script()
+        elif args.action == "test":
+            self.run_command("behave features plugins/builder/features")
+        elif args.action == "command":
+            await launcher.action_command(args)
         else:
             parser.print_help()
 

@@ -31,6 +31,7 @@
 
 import asyncio
 
+from command.layer import load_commands
 from data.base import db
 from data.session import CMDS_TO_PORTAL, OUTPUT
 from service.base import BaseService
@@ -40,6 +41,8 @@ import settings
 
 CONSOLE = Shell({"db": db}, "<shell>")
 SCRIPTING = Scripting()
+
+load_commands()
 
 class Service(BaseService):
 

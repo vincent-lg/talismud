@@ -29,6 +29,12 @@
 
 """Argument error."""
 
-class ArgumentError(Exception):
+class ArgumentError:
 
-    pass
+    """Error returned when an error occurred in parsing."""
+
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return self.message

@@ -31,14 +31,30 @@
 
 import asyncio
 from datetime import datetime
+from pathlib import Path
 import pickle
 import typing as ty
 from uuid import UUID, uuid4
 
 from aiohttp_session import AbstractStorage, Session
+from cryptography.fernet import Fernet, InvalidToken
 from pony.orm import Optional, PrimaryKey, Required, Set
 
 from data.base import db, PicklableEntity
+
+secret_file = Path() / "settings" / "private.key"
+if secret_file.exists():
+    print("Load the Fernet secret key from file")
+    with secret_file.open("rb") as file:
+        SECRET_KEY = file.read()
+else:
+    print("Generate a new Fernet key")
+    SECRET_KEY = Fernet.generate_key()
+    with secret_file.open("wb") as file:
+        file.write(SECRET_KEY)
+
+
+FERNET = Fernet(SECRET_KEY)
 
 class WebSession(PicklableEntity, db.Entity):
 
@@ -87,12 +103,18 @@ class PonyStorage(AbstractStorage):
     async def load_session(self, request):
         """Retrieve the WebSession data for a request."""
         cookie = self.load_cookie(request)
-        print(f"cookie: {cookie}")
         if cookie is None:
             print("No cookie saved for this request, just create one.")
             return Session(None, data=None, new=True, max_age=self.max_age)
         else:
-            key = str(cookie)
+            token = cookie.encode()
+            try:
+                key = FERNET.decrypt(token)
+            except InvalidToken:
+                print("This is not a valid token", token)
+                return Session(None, data=None, new=True, max_age=self.max_age)
+
+            key = key.decode()
             try:
                 uuid = UUID(key)
             except ValueError:
@@ -112,16 +134,20 @@ class PonyStorage(AbstractStorage):
         key = session.identity
         if key is None:
             key = uuid4().hex
-            print(f"this session doesn't exist, create a cookie (key={key}) for it")
-            self.save_cookie(response, key, max_age=session.max_age)
+            encrypted = FERNET.encrypt(key.encode()).decode()
+            print(f"this session doesn't exist, create a cookie (key={key}, enc={encrypted})")
+            self.save_cookie(response, encrypted,
+                    max_age=session.max_age)
         else:
             print(f"session {key} is empty")
             if session.empty:
                 self.save_cookie(response, '', max_age=session.max_age)
             else:
                 key = str(key)
+                encrypted = FERNET.encrypt(key.encode()).decode()
                 print(f"session {key} exists and the key is resaved in the cookie")
-                self.save_cookie(response, key, max_age=session.max_age)
+                self.save_cookie(response, encrypted,
+                        max_age=session.max_age)
 
         data = self._get_session_data(session)
         try:

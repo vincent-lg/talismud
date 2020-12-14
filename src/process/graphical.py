@@ -64,9 +64,7 @@ class Graphical(Launcher):
                 "bui isn't installed, can't create the graphical launcher"
             )
 
-        self.window = TalismudWindow.parse_layout(TalismudWindow)
-        self.window.process = self
-        self.window.service = launcher
+        self.window = TalismudWindow.parse_layout(TalismudWindow, process=self, service=launcher)
         self.window_task = asyncio.create_task(self.start_window())
 
     async def cleanup(self):

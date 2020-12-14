@@ -53,8 +53,8 @@ class Options(Argument):
     space = ArgSpace.UNKNOWN
     in_namespace = True
 
-    def __init__(self, dest, optional=False):
-        super().__init__(dest, optional=optional)
+    def __init__(self, dest, optional=False, default=None):
+        super().__init__(dest, optional=optional, default=default)
         self.options = []
         self.names = {}
         self.msg_unknown_option = "Unknown option: {option}"
@@ -147,7 +147,8 @@ class Options(Argument):
         for name, value in reversed(parsed.items()):
             option = self.names.get(name.lower())
             if option is None:
-                self.raise_error(self.msg_uknown_option.format(option=name))
+                return ArgumentError(self.msg_uknown_option.format(
+                        option=name))
 
             options[option] = value
 

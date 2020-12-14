@@ -32,23 +32,13 @@
 from importlib import import_module
 import inspect
 from pathlib import Path
-from typing import Any, Dict
+import traceback
+from typing import Any, Dict, Optional, Sequence
 
-from logbook import FileHandler, Logger
-
-from command.args import CommandArgs, Namespace
+from command.args import ArgumentError, CommandArgs, Namespace
+from command.log import logger
 
 NOT_SET = object()
-
-# Logger
-logger = Logger()
-file_handler = FileHandler("logs/commands.log",
-        encoding="utf-8", level="DEBUG", delay=True)
-file_handler.format_string = (
-        "{record.time:%Y-%m-%d %H:%M:%S.%f%z} [{record.level_name}] "
-        "{record.message}"
-)
-logger.handlers.append(file_handler)
 
 class Command:
 
@@ -179,6 +169,11 @@ class Command:
 
         return True
 
+    @classmethod
+    def new_parser(self):
+        """Simply return an empty command argument parser."""
+        return CommandArgs()
+
     def parse(self):
         """Parse the command, returning the namespace or an error."""
         return type(self).args.parse(self.arguments)
@@ -210,24 +205,33 @@ class Command:
 
         """
         try:
-            args = self.parse()
-            args = self.args_to_dict(args)
+            result = self.parse()
+            if isinstance(result, ArgumentError):
+                await self.msg(str(result))
+                return
+
+            args = self.args_to_dict(result)
             await self.run(**args)
         except Exception:
+            # If an administrator, sends the traceback directly
+            if self.character and self.character.permissions.has("admin"):
+                await self.msg(traceback.format_exc(), raw=True)
+
             logger.exception(
                     f"An error occurred while parsing and running the "
                     f"{self.name} commnd:"
             )
 
-    async def msg(self, text: str):
+    async def msg(self, text: str, raw: Optional[bool] = False):
         """
         Send the message to the character running the command.
 
         Args:
             text (str): text to send to the character.
+            raw (bool, optional): if True, escape braces.
 
         """
-        await self.character.msg(text)
+        await self.character.msg(text, raw=raw)
 
     @classmethod
     def extrapolate(cls, path: Path):
@@ -244,37 +248,54 @@ class Command:
         if not hasattr(cls, "name"):
             cls.name = cls.__name__.lower()
 
-        # Try to find the command category
-        if not hasattr(cls, "category"):
-            cls.category = cls._explore_for(path, "CATEGORY",
-                    default="General")
+        # Try to find the command category, permissions and layer
+        if any(not hasattr(cls, missing) for missing in
+                ("category", "permissions", "layer")):
+            category, permissions, layer = cls._explore_for(path, (
+                    "CATEGORY", "PERMISSIONS", "LAYER"))
 
-        # Look for the command permissions
-        if not hasattr(cls, "permissions"):
-            cls.permissions = cls._explore_for(path, "PERMISSIONS", default="")
+            if not hasattr(cls, "category"):
+                category = category or "General"
+                cls.category = category
 
-        return cls
+            if not hasattr(cls, "permissions"):
+                permissions = permissions or ""
+                cls.permissions = permissions
+
+            if not hasattr(cls, "layer"):
+                layer = layer or "static"
+                cls.layer = layer
 
     @staticmethod
-    def _explore_for(path: Path, name: str, default: Any):
-        """Explore for the given variable name."""
-        pypath = ".".join(path.parts)[:-3]
-        module = import_module(pypath)
-        value = getattr(module, name, NOT_SET)
-        if value is not NOT_SET:
-            return value
+    def _explore_for(path: Path, names: Sequence[str]):
+        """Explore for the given variable names."""
+        values = [NOT_SET] * len(names)
+        current = path
+        while str(current) != '.':
+            if current.parts[-1].endswith(".py"):
+                current = current.parent / current.stem
 
-        # Import parent directories
-        rindex = 1
-        while rindex < len(path.parts) - 1:
-            pypath = ".".join(path.parts[:-rindex])
+            pypath = ".".join(current.parts)
             module = import_module(pypath)
-            value = getattr(module, name, NOT_SET)
-            if value is not NOT_SET:
-                return value
-            rindex += 1
+            for i, name in enumerate(names):
+                if values[i] is not NOT_SET:
+                    continue
 
-        return default
+                value = getattr(module, name, NOT_SET)
+                if value is not NOT_SET:
+                    values[i] = value
+
+            if not any(value is NOT_SET for value in values):
+                return tuple(values)
+
+            current = current.parent
+
+        # Some values couldn't be found in parent directories
+        for i, value in enumerate(values):
+            if value is NOT_SET:
+                values[i] = None
+
+        return tuple(values)
 
     @classmethod
     def args_to_dict(cls, args: Namespace) -> Dict[str, Any]:

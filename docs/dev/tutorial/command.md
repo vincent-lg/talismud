@@ -638,4 +638,4 @@ Troubleshooting your new command might be complicated, but you have a lot of too
 
 Your log file might sound like a dangerous thing, a potential breach in privacy.  TalisMUD goes to a lot of trouble to avoid writing sensitive information in this file.  If it fails, that's even more reason to keep it accessible only to you and to avoid exploiting its data, except in emergencies.
 
-Still stuck?  It might be time to reach out.  Please [contact the project developers](/contact.html) and we'll try to help.  And update this page, if that's a question we often get!
+Still stuck?  It might be time to reach out.  Please [contact the project developers](../../contact.html) and we'll try to help.  And update this page, if that's a question we often get!

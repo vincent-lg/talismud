@@ -30,10 +30,13 @@
 """Launcher service."""
 
 import asyncio
+from importlib import import_module
 import sys
 
 from async_timeout import timeout as async_timeout
 from enum import Enum, Flag, auto
+
+from beautifultable import BeautifulTable
 
 from service.base import BaseService
 
@@ -481,3 +484,95 @@ class Service(BaseService):
         # If the game wasn't started before executing code, stop it.
         if not init_started:
             await self.action_stop()
+
+    async def action_command(self, args):
+        """
+        Examine TalisMUD commands.
+
+        Note:
+            This is done by importing the game commands.  The output
+            might not align with the current game instance,
+            if not reloaded.
+
+        """
+        filters = args.filters
+        from command.layer import COMMANDS_BY_LAYERS, load_commands
+        load_commands()
+
+        if not filters:
+            table = BeautifulTable()
+            table.columns.header = ("Layer", "Number of commands", "Category")
+            table.columns.header.alignment = BeautifulTable.ALIGN_LEFT
+            table.columns.alignment["Layer"] = BeautifulTable.ALIGN_LEFT
+            table.columns.alignment["Number of commands"] = BeautifulTable.ALIGN_RIGHT
+            table.columns.alignment["Category"] = BeautifulTable.ALIGN_LEFT
+            table.columns.padding_left['Layer'] = 0
+            table.columns.padding_right['Category'] = 0
+            table.set_style(BeautifulTable.STYLE_NONE)
+            table.rows.separator = ""
+            for layer, commands in COMMANDS_BY_LAYERS.items():
+                categories = set(command.category
+                        for command in commands.values())
+                if len(categories) == 1:
+                    category = categories.pop()
+                else:
+                    category = "{Multiple}"
+
+                table.rows.append((layer, len(commands), category))
+            print(table)
+        elif len(filters) == 1 and '.' in filters[0]:
+            # Try to debug a single command
+            from command import Command
+            pypath = filters[0]
+            mod_path, cmd_name = pypath.rsplit(".", 1)
+            print(f"Try to import this module: {mod_path!r}")
+            module = import_module(mod_path)
+            command = getattr(module, cmd_name, None)
+            if command is None:
+                print(f"{cmd_name} cannot be found in the {mod_path} module.")
+                return
+
+            # Check its type
+            if isinstance(command, type) and command is not Command and issubclass(command, Command):
+                print(f"{cmd_name} is a subclass of the Command class, as it should be.")
+            else:
+                print(f"{cmd_name} isn't a class inheriting from the Command class.")
+                return
+
+            # Prints some details
+            name = command.name or "{UNSET}"
+            category = command.category or "{UNSET}"
+            layer = command.layer or "{UNSET}"
+            aliases = command.alias or ("{No alias}", )
+            aliases = aliases if isinstance(aliases, (tuple, list)) else (aliases, )
+            aliases = ",".join(aliases)
+            permissions = command.permissions or "{Everyone}"
+            print(f"Name   : {name:<15} Category   : {category:<25} Layer: {layer}")
+            print(f"Aliases: {aliases:<15} Permissions: {permissions:<25}")
+
+            # Try to see if it has been replaced by another
+            layer = COMMANDS_BY_LAYERS[command.layer]
+            same_name = layer[command.name]
+            if command is same_name:
+                print("This command has properly been loaded into its layer.")
+            else:
+                print(f"Inside the {command.layer} command layer, another command has the name {command.name}.")
+                print(f"Therefore, {same_name.__module__}.{same_name.__name__} replaces {pypath}.")
+        else:
+            commands = [command for commands in COMMANDS_BY_LAYERS.values()
+                    for command in commands.values()
+                    if command.layer in filters or command.name in filters or f"{command.__module__}.{command.__name__}" in filters]
+            commands.sort(key=lambda cmd: (cmd.layer, cmd.name))
+            table = BeautifulTable()
+            table.columns.header = ("Layer", "Command", "Category", "Permissions", "Python path")
+            table.columns.header.alignment = BeautifulTable.ALIGN_LEFT
+            table.columns.alignment = BeautifulTable.ALIGN_LEFT
+            table.columns.padding_left['Layer'] = 0
+            table.columns.padding_right['Python path'] = 0
+            table.set_style(BeautifulTable.STYLE_NONE)
+            table.rows.separator = ""
+            for cmd in commands:
+                permissions = cmd.permissions
+                permissions = permissions or "{Everyone}"
+                table.rows.append((cmd.layer, cmd.name, cmd.category, permissions, f"{cmd.__module__}.{cmd.__name__}"))
+            print(table)

@@ -128,3 +128,18 @@ BLUEPRINT_DIRECTORY = "blueprints"
 
 # Blueprint backup mode
 BLUEPRINT_BACKUP = True
+
+# 7. Plugins
+# Plugins can add or replace behavior.  Like the rest of the game,
+# they're entirely open and can be customized.  Plugins are simple
+# directories, found in the "plugins" parent directory.  They
+# contain commands (these would replace or extend the list of commands
+# in the game), contexts, database entities and other details.
+# To activate the features in a plugin, just add it to the below
+# setting, which is a tuple of plugin names.  The order in which
+# you'll find this tuple is the order in which plugins are loaded,
+# therefore, if two plugins replace the 'look' command, keep the
+# one you want to replace this command after the other one in the tuple.
+
+# Installed plugins
+PLUGINS = ("builder", )

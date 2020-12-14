@@ -34,7 +34,8 @@ import asyncio
 from importlib import import_module
 import os
 import platform
-from subprocess import Popen, DEVNULL, PIPE
+from shlex import split
+from subprocess import Popen, DEVNULL, PIPE, run
 import sys
 from typing import Tuple
 
@@ -169,6 +170,23 @@ class Process(metaclass=ABCMeta):
 
         return True
 
+    def run_command(self, command) -> int:
+        """
+        Run the specified command, reutning its status.
+
+        Args:
+            command 9str): the command to run.
+
+        """
+        if platform.system() != 'Windows':
+            command = split(command)
+
+        self.logger.debug(
+            f"Calling the {command!r} command"
+        )
+
+        return run(command).returncode
+
     def start_process(self, process_name):
         """
         Start a task in a separate process.
@@ -193,7 +211,8 @@ class Process(metaclass=ABCMeta):
         # Under Windows, specify a different creation flag
         creationflags = 0x08000000 if platform.system() == "Windows" else 0
         command = f"python {process_name}.py"
-        if getattr(sys, "frozen", False):
+        frozen = getattr(sys, "frozen", False)
+        if frozen:
             command = process_name
             command += ".exe" if platform.system() == 'Windows' else ""
 
@@ -203,10 +222,10 @@ class Process(metaclass=ABCMeta):
         self.logger.debug(
             f"Starting the {process_name!r} process: {command!r}"
         )
-        try:
+        if frozen:
+            process = Popen(command, creationflags=creationflags)
+        else:
             process = Popen(command, stdout=PIPE, stderr=PIPE,
                 creationflags=creationflags)
-        except OSError:
-            process = Popen(command, creationflags=creationflags)
 
         return process

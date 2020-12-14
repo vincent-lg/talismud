@@ -47,24 +47,3 @@ class Word(Argument):
 
     def __repr__(self):
         return "<Word>"
-
-    def parse(self, string: str, begin: int = 0,
-            end: Optional[int] = None) -> Union[Result, ArgumentError]:
-        """
-        Parse the argument.
-
-        Args:
-            string (str): the string to parse.
-            begin (int): the beginning of the string to parse.
-            end (int, optional): the end of the string to parse.
-
-        Returns:
-            result (Result or ArgumentError).
-
-        """
-        end = end or len(string)
-        space_pos = string.find(" ", begin)
-        if space_pos != -1:
-            end = space_pos
-
-        return Result(begin=begin, end=end, string=string)

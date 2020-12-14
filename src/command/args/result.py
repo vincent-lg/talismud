@@ -27,7 +27,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Argument result."""
+"""Command argument result classes."""
 
 class Result:
 
@@ -39,5 +39,13 @@ class Result:
         self.string = string
 
     @property
-    def success(self):
+    def portion(self):
         return self.string[self.begin:self.end]
+
+
+class DefaultResult:
+
+    """A result that just wraps a default value."""
+
+    def __init__(self, value):
+        self.value = value

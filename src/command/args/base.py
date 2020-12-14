@@ -41,10 +41,9 @@ class ArgSpace(Enum):
 
     """Enumeration to define the space this argument takes."""
 
-    UNKNOWN = 1
-    CHARACTER = 2
-    WORD = 3
-    ALL = 4
+    UNKNOWN = 1 # Anything can be captured
+    STRICT = 2 # The command knows what to capture
+    WORD = 3 # The command will capture the first word
 
 
 class ArgMeta(type):
@@ -64,9 +63,11 @@ class Argument(metaclass=ArgMeta):
     space = ArgSpace.UNKNOWN
     in_namespace = True
 
-    def __init__(self, dest, optional=False, **kwargs):
+    def __init__(self, dest, optional=False, default=None, **kwargs):
         self.dest = dest
         self.optional = optional
+        self.default = default
+        self.msg_mandatory = "You should specify a {argument}."
 
     def __repr__(self):
         return f"<Arg {self.name}>"
@@ -75,9 +76,6 @@ class Argument(metaclass=ArgMeta):
             end: Optional[int] = None) -> Union[Result, ArgumentError]:
         """
         Parse the argument.
-
-        This method should return either a valid result (`Result`
-        type) or an error (`ArgumentErro`).
 
         Args:
             string (str): the string to parse.
@@ -88,8 +86,11 @@ class Argument(metaclass=ArgMeta):
             result (Result or ArgumentError).
 
         """
-        raise NotImplementedError
+        if type(self).space is ArgSpace.WORD:
+            space_pos = string.find(" ", begin)
+            if space_pos != -1:
+                end = space_pos
 
-    def raise_error(self, message: str):
-        """Raise an `ArgumentError` exception."""
-        raise ArgumentError(message)
+            return Result(begin=begin, end=end, string=string)
+        else:
+            return Result(begin=begin, end=end, string=string)

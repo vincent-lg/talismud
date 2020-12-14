@@ -34,7 +34,9 @@ from typing import Optional, Union
 from command.args.base import ArgSpace, ARG_TYPES
 from command.args.error import ArgumentError
 from command.args.namespace import Namespace
-from command.args.result import Result
+from command.args.result import DefaultResult, Result
+
+_NOT_SET = object()
 
 class CommandArgs:
 
@@ -91,7 +93,7 @@ class CommandArgs:
         self.arguments = []
 
     def add_argument(self, arg_type: str, dest: Optional[str] = None,
-            optional=False, **kwargs):
+            optional=False, default=_NOT_SET, **kwargs):
         """
         Add a new argument to the parser.
 
@@ -108,7 +110,8 @@ class CommandArgs:
             raise KeyError(f"invalid argument type: {arg_type!r}")
 
         dest = dest or arg_type
-        argument = arg_class(dest, optional=optional, **kwargs)
+        argument = arg_class(dest, optional=optional, default=default,
+                **kwargs)
         self.arguments.append(argument)
         return argument
 
@@ -129,38 +132,69 @@ class CommandArgs:
         results = [None] * len(self.arguments)
 
         # Parse arguments with definite size
-        fixed = [arg for arg in self.arguments if
-                arg.space is not ArgSpace.UNKNOWN]
-        for arg in fixed:
-            i = self.arguments.index(arg)
-            result = arg.parse(arguments, 0)
-            results[i] = result
+        attempts = (
+                # Strict arguments
+                [arg for arg in self.arguments if
+                        arg.space is ArgSpace.STRICT],
+                # Fixed in length
+                [arg for arg in self.arguments if
+                        arg.space is ArgSpace.WORD],
+                # Others
+                tuple(self.arguments),
+        )
 
-        # Parse other arguments
-        begin = 0
-        for i, arg in enumerate(self.arguments):
-            result = results[i]
-            if result:
-                begin = result.end
-                continue
+        for attempt in attempts:
+            for arg in attempt:
+                i = self.arguments.index(arg)
+                if results[i] is not None:
+                    continue
 
-            # If result is None, we need to delimit the argument
-            if i == len(self.arguments) - 1: # That is the last argument
-                result = arg.parse(arguments, begin)
+                # If there's a previous result, parse after it
+                begin = 0
+                if i > 0:
+                    prev_results = [result for result in results[:i]
+                            if isinstance(result, Result)]
+                    if prev_results:
+                        prev_result = prev_results[-1]
+                        begin = prev_result.end
+
+                # Skip over spaces
+                while begin < len(arguments):
+                    if arguments[begin].isspace():
+                        begin += 1
+                    else:
+                        break
+
+                # If there's a following result, parse before it
+                end = len(arguments)
+                if i < len(self.arguments) - 1:
+                    next_results = [result for result in results[i + 1:]
+                            if isinstance(result, Result)]
+                    if next_results:
+                        next_result = next_results[0]
+                        end = next_result.begin
+
+                if begin == end and not arg.optional:
+                    return ArgumentError(arg.msg_mandatory.format(
+                            argument=arg.name))
+
+                result = arg.parse(arguments, begin, end)
+                if (isinstance(result, ArgumentError) and
+                        arg.default is not _NOT_SET):
+                    result = DefaultResult(arg.default)
                 results[i] = result
-                continue
 
-            # If there's a result for the next argument, use its limit
-            next_result = results[i + 1]
-            if next_result:
-                result = arg.parse(arguments, begin, next_result.begin)
-                results[i] = result
-                continue
+        # If an error has occurred, return the first
+        # mandatory argument error
+        errors = [result for result in results if
+                isinstance(result, ArgumentError)]
+        if errors:
+            mandatory = [result for result in errors if
+                    not self.arguments[results.index(result)].optional]
+            if mandatory:
+                return mandatory[0]
 
-            # Otherwise, that's an error
-            raise ValueError(
-                f"{arg!r} isn't the last argument, yet the nex argument "
-                f"in line ({self.arguments[i + 1]!r}), cannot be parsed.")
+            return errors[0]
 
         # Create the namespace
         namespace = Namespace()
@@ -168,10 +202,17 @@ class CommandArgs:
             if not arg.in_namespace:
                 continue
 
+            if isinstance(result, DefaultResult):
+                value = result.value
+            elif not isinstance(result, Result):
+                continue
+            else:
+                value = result.portion
+
             custom = getattr(arg, "add_to_namespace", None)
             if custom:
                 custom(result, namespace)
             else:
-                setattr(namespace, arg.dest, arguments[result.begin:result.end])
+                setattr(namespace, arg.dest, value)
 
         return namespace

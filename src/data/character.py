@@ -32,6 +32,7 @@
 import inspect
 from datetime import datetime
 import pickle
+import typing as ty
 
 from pony.orm import Optional, Required, Set
 
@@ -119,12 +120,19 @@ class Character(PicklableEntity, db.Entity):
         stack.add_layer(StaticCommandLayer)
         return stack
 
-    async def msg(self, text, variables=None):
+    async def msg(self, text, variables=None, raw: ty.Optional[bool] = False):
         """
         Send text to the connected session, if any.
 
+        Args:
+            text (bytes or str): the text to send.
+            variables (dict, optional): the variables to use.
+            raw (bool, optional): if True, escape braces, remove variables.
+
         """
-        formatter = VariableFormatter(self, variables)
-        text = formatter.format(text)
+        if not raw:
+            formatter = VariableFormatter(self, variables)
+            text = formatter.format(text)
+
         if self.session:
             await self.session.msg(text)

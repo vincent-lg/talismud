@@ -30,8 +30,10 @@
 """Package containng the command arguments."""
 
 from command.args.args import CommandArgs
+from command.args.error import ArgumentError
 from command.args.keyword import Keyword
 from command.args.options import Options
 from command.args.namespace import Namespace
+from command.args.number import Number
 from command.args.text import Text
 from command.args.word import Word
