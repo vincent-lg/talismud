@@ -148,7 +148,7 @@ class Service(CmdMixin, BaseService):
             try:
                 async with timeout(self.timeout):
                     reader, writer = await asyncio.open_connection('localhost', 4005, ssl=ssl_ctx)
-            except (ConnectionRefusedError, asyncio.TimeoutError) as err:
+            except (ConnectionRefusedError, asyncio.TimeoutError, OSError) as err:
                 self.logger.debug(f"host: can't connect to CRUX, {err!r}")
                 # Asynchronously sleeps.  If `timeout` is set to 1 and
                 # connection has failed in 0.5 second, sleep 0.5 second again.
