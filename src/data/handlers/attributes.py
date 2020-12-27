@@ -42,6 +42,8 @@ class AttributeHandler:
 
     """Attribute handler."""
 
+    subset = "attribute"
+
     def __init__(self, owner):
         self.__owner = owner
         self.__object_class = owner.__class__.__name__
@@ -61,7 +63,7 @@ class AttributeHandler:
             if attr:
                 attr.pickled = pickle.dumps(value)
             else:
-                Attribute(object_class=self.__object_class,
+                Attribute(subset=self.subset, object_class=self.__object_class,
                         object_id=self.__object_id, name=name,
                         pickled=pickle.dumps(value))
 
@@ -104,19 +106,24 @@ class AttributeHandler:
             value or default: the value of the attribute, or default.
 
         """
-        return self._get_attribute_of_name(attribute, default=default)
+        return self._get_attribute_of_name(attribute, default=default,
+                value=True)
 
     def _get_all_attributes(self):
         """Return the attributes for this object."""
         return select(attribute for attribute in Attribute
-                if attribute.object_class == self.__object_class and
+                if attribute.subset == self.subset
+                and attribute.object_class == self.__object_class and
                 attribute.object_id == self.__object_id)
 
-    def _get_attribute_of_name(self, name, default=NOT_SET):
+    def _get_attribute_of_name(self, name, default=NOT_SET, value=False):
         """Return the attribute of this name, or raise an exception."""
         result = select(attr for attr in self._get_all_attributes()
                 if attr.name == name)[:]
         if result:
+            if value:
+                return result[0].value
+        
             return result[0]
 
         if default is not NOT_SET:
@@ -129,10 +136,11 @@ class Attribute(db.Entity):
 
     """Database attribute, linked to any object."""
 
+    subset = Required(str)
     object_class = Required(str)
     object_id = Required(int)
     name = Required(str)
-    PrimaryKey(object_class, object_id, name)
+    PrimaryKey(subset, object_class, object_id, name)
     pickled = Required(bytes)
 
     @property
