@@ -170,6 +170,29 @@ class Command:
         return True
 
     @classmethod
+    def get_help(cls, character=None) -> str:
+        """
+        Return the help of a command, tailored for a character.
+
+        If a character asks for this command help, the command
+        permissions are checked beforehand.  It can be assumed
+        the character is authorized to see this command at this
+        point.  However, if the character isn't specified, there's
+        no way to be sure she could execute the command, as she's
+        not specified.  Handle this use case before calling
+        `get_help` with no argument, as this is a rather special
+        use case.
+
+        Args:
+            character (Character, optional): the character asking for help.
+
+        Returns:
+            help (str): the command help as a str.
+
+        """
+        return inspect.getdoc(cls)
+
+    @classmethod
     def new_parser(self):
         """Simply return an empty command argument parser."""
         return CommandArgs()

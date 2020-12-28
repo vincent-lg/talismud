@@ -41,14 +41,15 @@ from cryptography.fernet import Fernet, InvalidToken
 from pony.orm import Optional, PrimaryKey, Required, Set
 
 from data.base import db, PicklableEntity
+from web.log import logger
 
 secret_file = Path() / "settings" / "private.key"
 if secret_file.exists():
-    print("Load the Fernet secret key from file")
+    logger.debug("Load the Fernet secret key from file")
     with secret_file.open("rb") as file:
         SECRET_KEY = file.read()
 else:
-    print("Generate a new Fernet key")
+    logger.debug("Generate a new Fernet key")
     SECRET_KEY = Fernet.generate_key()
     with secret_file.open("wb") as file:
         file.write(SECRET_KEY)

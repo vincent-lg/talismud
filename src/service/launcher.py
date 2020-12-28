@@ -576,3 +576,32 @@ class Service(BaseService):
                 permissions = permissions or "{Everyone}"
                 table.rows.append((cmd.layer, cmd.name, cmd.category, permissions, f"{cmd.__module__}.{cmd.__name__}"))
             print(table)
+
+    async def action_web(self):
+        """Display web routes."""
+        from web.base_template import load_base_templates
+        from web.uri import URI
+        load_base_templates()
+        uris = URI.gather()
+        uris = sorted(list(uris.values()), key=lambda uri: uri.uri)
+        table = BeautifulTable()
+        table.columns.header = ("Route", "Template", "Program", "Get", "Post",
+                "Put", "Delete")
+        table.columns.header.alignment = BeautifulTable.ALIGN_LEFT
+        table.columns.alignment[0] = BeautifulTable.ALIGN_LEFT
+        table.columns.alignment[-1] = BeautifulTable.ALIGN_RIGHT
+        table.columns.alignment = BeautifulTable.ALIGN_LEFT
+        table.columns.padding_left[0] = 0
+        table.columns.padding_right[-1] = 0
+        table.set_style(BeautifulTable.STYLE_NONE)
+        for uri in uris:
+            template = uri.page_path or "No"
+            program = uri.program_path or "No"
+            get = "Yes" if "get" in uri.methods else "No"
+            post = "Yes" if "post" in uri.methods else "No"
+            put = "Yes" if "put" in uri.methods else "No"
+            delete = "Yes" if "delete" in uri.methods else "No"
+            table.rows.append((uri.uri, template, program, get, post,
+                    put, delete))
+
+        print(table)

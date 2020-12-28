@@ -1,11 +1,9 @@
 from aiohttp import web
-from aiohttp_session import get_session
 
 from data.base import db
 
-async def post(request):
+async def post(request, session):
     data = await request.post()
-    session = await get_session(request)
 
     # Get the corresponding username, if possible
     username = data.get("username", "")
@@ -18,6 +16,5 @@ async def post(request):
             session["account"] = account
             raise web.HTTPFound('/')
 
-async def get(request):
-    session = await get_session(request)
+async def get(session):
     print(f"this request is logged in as: {session.get('account', None)}")

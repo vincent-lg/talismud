@@ -32,11 +32,12 @@
 from collections import defaultdict
 from importlib import import_module
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 from command.base import Command, logger
 from command.log import logger
 from command.special.exit import ExitCommand
+import settings
 
 # Constants
 COMMANDS_BY_LAYERS = defaultdict(dict)
@@ -246,6 +247,9 @@ def load_commands(raise_exception: Optional[bool] = False):
     ]
 
     can_contain = (parent_dir, )
+    plugins_path = Path("plugins")
+    can_contain += tuple(plugins_path / name / "command" for name in
+            settings.PLUGINS)
     logger.debug("Loading the commands...")
     how_many = 0
     for parent in can_contain:
@@ -294,6 +298,56 @@ def load_commands(raise_exception: Optional[bool] = False):
                 logger.warning("  No command was found in "
                         f"the {pypath} module")
 
-        s = "s" if how_many > 1 else ""
-        were = "were" if how_many > 1 else "was"
-        logger.debug(f"{how_many} command{s} {were} succesfully loaded")
+    s = "s" if how_many > 1 else ""
+    were = "were" if how_many > 1 else "was"
+    logger.debug(f"{how_many} command{s} {were} succesfully loaded")
+
+def find_command(name: str, layer: Optional[str] = "static"):
+    """
+    Find and return a command class or None.
+
+    Args:
+        name (str): the name of the command.
+        layer (str, optional): the optional name of the layer.  If not
+                set, only search in 'static'.  If set to 'None', search
+                in every layer.
+
+    Returns:
+        command (command class or None): the command class, if found,
+                else None.
+
+    Raises:
+        ValueError if the command layer cannot be found.
+
+    """
+    if layer is None:
+        layers = COMMANDS_BY_LAYERS.values()
+    else:
+        filter = COMMANDS_BY_LAYERS.get(layer)
+        if filter is None:
+            raise ValueError("unknown command layer: {layer!r}")
+
+        layers = [filter]
+
+    for layer in layers:
+        command = layer.get(name)
+        if command is not None:
+            return command
+
+    return None # Explicit is better than implicit
+
+def filter_can_run(commands: Dict[str, Command],
+        character: 'Character') -> Dict[str, Command]:
+    """
+    Return the filtered dictionary of commands the character can run.
+
+    Args:
+        commands (dict): a dictionary of commands.
+        character (Character): the character to test.
+
+    Returns:
+        allowed (Dict): the dicitonary of allowed commands.
+
+    """
+    return {name: command for name, command in commands.items()
+            if command.can_run(character)}

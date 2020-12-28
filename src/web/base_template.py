@@ -30,7 +30,21 @@
 """Base template, from which almost all other templates inherit."""
 
 from Cheetah.Template import Template
+from pathlib import Path
 
 class BaseTemplate(Template):
 
     pass
+
+def load_base_templates():
+    """Function to load base templates."""
+    path = Path("web/bases")
+
+    # Base templates are in web/bases and have the .tmpl extension
+    for base_path in path.rglob("*.tmpl"):
+        relative = base_path.relative_to(path)
+        identifier = relative.as_posix().replace("/", ".")[:-5]
+        with base_path.open("r", encoding="utf-8") as file:
+            content = file.read()
+        template = BaseTemplate.compile(content, moduleName=identifier,
+                baseclass=BaseTemplate)

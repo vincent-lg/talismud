@@ -142,4 +142,6 @@ BLUEPRINT_BACKUP = True
 # one you want to replace this command after the other one in the tuple.
 
 # Installed plugins
-PLUGINS = ("builder", )
+PLUGINS = (
+        "builder",
+)

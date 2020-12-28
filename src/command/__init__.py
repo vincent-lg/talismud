@@ -44,4 +44,4 @@ in parent packages.
 
 from command.args import CommandArgs
 from command.base import Command
-from command.layer import CommandLayer
+from command.layer import CommandLayer, find_command

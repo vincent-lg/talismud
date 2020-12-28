@@ -29,11 +29,15 @@
 
 """URI, connecting a page and optional programs."""
 
-from importlib import import_module
+import inspect
 from pathlib import Path
+import types
 
-from Cheetah.Template import Template
 from aiohttp import web
+from aiohttp_session import get_session
+from Cheetah.Template import Template
+
+import settings
 
 class URI:
 
@@ -57,15 +61,35 @@ class URI:
         self.page = None
         self.methods = {}
 
+        # Additional information (not required)
+        self.template_path = None
+        self.program_path = None
+
     async def process(self, request):
         """Process the current URI."""
         # Execute the program, if any
-        program = self.methods.get(request.method.lower())
-        print(f"{request.method} {self.uri}, {program}")
-        if program:
-            result = await program(request)
-
+        program, signature = self.methods.get(request.method.lower(),
+                (None, None))
         self.page.messages = []
+        if program:
+            # Dynamically build keyword arguments
+            parameters = tuple(signature.parameters.keys())
+            kwargs = {}
+            for key, value in request.match_info.items():
+                if key in parameters:
+                    kwargs[key] = value
+
+            if "request" in parameters:
+                kwargs["request"] = request
+
+            if "page" in parameters:
+                kwargs["page"] = self.page
+
+            if "session" in parameters:
+                kwargs["session"] = await get_session(request)
+
+            result = await program(**kwargs)
+
         response = str(self.page)
         return web.Response(text=response, content_type="text/html")
 
@@ -85,53 +109,83 @@ class URI:
         However, a file ccalled about.tmpl in web/pages/ will be
         linked to the URI /about, no matter the method.
 
+        Additionally, this method will also dynamically load plugin
+        programs and pages.
+
         Returns:
             uris (list): list of URIs.
 
         """
         uris = {}
+
         # First, gather the programs
-        programs_path = Path() / "web/progs"
-        for program_path in programs_path.rglob("*.py"):
-            uri = program_path.relative_to(programs_path).as_posix()[:-3]
-            pypath = program_path.as_posix()[:-3].replace("/", ".")
-            program = import_module(pypath)
+        web_paths = [Path() / "web"]
+        plugins_path = Path() / "plugins"
+        web_paths += [plugins_path / name / "web" for name in settings.PLUGINS]
 
-            # Create an URI object
-            resource = URI("/" + uri)
-            resource.program = program
+        for web_path in web_paths:
+            programs_path = web_path / "progs"
+            for program_path in programs_path.rglob("*.py"):
+                uri = program_path.relative_to(programs_path).as_posix()[:-3]
 
-            # Assign methods based on callable names
-            print(f"load {pypath}")
-            for key, value in program.__dict__.items():
-                if key.startswith("_"):
-                    continue
+                # Read the module and execute it, instead of importing it
+                # This is due to the fact that the path might not be
+                # valid Python.
+                with program_path.open("r", encoding="utf-8") as file:
+                    content = file.read()
 
-                if not callable(value):
-                    continue
+                program = types.ModuleType(uri)
+                exec(content, program.__dict__)
 
-                if key not in ("get", "post", "put", "delete"):
-                    continue
+                # Create an URI object
+                uri = URI.parse_uri(uri)
+                resource = URI("/" + uri)
+                resource.program = program
+                resource.program_path = program_path.relative_to(web_path)
 
-                resource.methods[key] = value
-            uris[resource.uri] = resource
+                # Assign methods based on callable names
+                for key, value in program.__dict__.items():
+                    if key.startswith("_"):
+                        continue
 
-        # Gather the pages
-        pages_path = Path() / "web/pages"
-        for page_path in pages_path.rglob("*.tmpl"):
-            with page_path.open("r", encoding="utf-8") as file:
-                content = file.read()
+                    if not callable(value):
+                        continue
 
-            template = Template(content)
-            uri = page_path.relative_to(pages_path).as_posix()[:-5]
-            parts = uri.split("/")
-            if parts[-1] == "index":
-                uri = "/".join(parts[:-1])
-            uri = f"/{uri}"
-            resource = uris.get(uri)
-            if resource is None:
-                resource = URI(uri)
-                uris[uri] = resource
-            resource.page = template
+                    if key not in ("get", "post", "put", "delete"):
+                        continue
+
+                    signature = inspect.signature(value)
+                    resource.methods[key] = (value, signature)
+                uris[resource.uri] = resource
+
+            # Gather the pages
+            pages_path = web_path / "pages"
+            for page_path in pages_path.rglob("*.tmpl"):
+                with page_path.open("r", encoding="utf-8") as file:
+                    content = file.read()
+
+                template = Template(content)
+                uri = page_path.relative_to(pages_path).as_posix()[:-5]
+                uri = "/" + URI.parse_uri(uri)
+                if uri.endswith("/index"):
+                    uri = uri[:-5]
+                resource = uris.get(uri)
+                if resource is None:
+                    resource = URI(uri)
+                    uris[uri] = resource
+                resource.page = template
+                resource.page_path = page_path.relative_to(web_path)
 
         return uris
+
+    @staticmethod
+    def parse_uri(uri: str) -> str:
+        """Parse the URI, returning an URI valid for the router."""
+        parts = uri.split("/")
+
+        for i, part in enumerate(parts):
+            if part.startswith("$"):
+                parts[i] = f"{{{part[1:]}}}"
+
+        uri = "/".join(parts)
+        return uri

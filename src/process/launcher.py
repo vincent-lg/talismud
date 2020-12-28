@@ -54,6 +54,8 @@ sub_cmd = subparsers.add_parser("command", help="examine TalisMUD commands")
 sub_cmd.set_defaults(action="command")
 sub_cmd.add_argument("filters", nargs="*",
         help="Optional filters (layers or commands))")
+sub_web = subparsers.add_parser("web", help="show TalisMUD web routes")
+sub_web.set_defaults(action="web")
 
 class Launcher(Process):
 
@@ -109,6 +111,8 @@ class Launcher(Process):
             self.run_command("behave features plugins/builder/features")
         elif args.action == "command":
             await launcher.action_command(args)
+        elif args.action == "web":
+            await launcher.action_web()
         else:
             parser.print_help()
 

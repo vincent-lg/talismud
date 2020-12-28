@@ -40,7 +40,7 @@ from cryptography import fernet
 
 from service.base import BaseService
 import settings
-from web.base_template import BaseTemplate
+from web.base_template import load_base_templates
 from web.session import PonyStorage
 from web.uri import URI
 
@@ -70,7 +70,7 @@ class Service(BaseService):
         Prepare to start the server, load base templates.
 
         """
-        self.load_base_templates()
+        load_base_templates()
         uris = URI.gather()
         for uri, resource in uris.items():
             methods = resource.methods
@@ -78,7 +78,6 @@ class Service(BaseService):
                 methods["get"] = None
 
             for method in methods.keys():
-                print(f"Add {method} for {resource.uri}")
                 self.app.add_routes([
                         getattr(aioweb, method)(uri, resource.process)
                 ])
@@ -112,26 +111,6 @@ class Service(BaseService):
         site = aioweb.TCPSite(self.runner, interface, port)
         await site.start()
         self.preparing_task = None
-
-    def load_base_templates(self):
-        """
-        Synchronously load the base templates.
-
-        Contrary to page templates, base templates are loaded with the server.  Page templates will be loaded when a requests asks for them.
-
-        """
-        path = Path("web/bases")
-
-        # Base templates are in web/pages and have the .tmpl extension
-        for base_path in path.rglob("*.tmpl"):
-            relative = base_path.relative_to(path)
-            identifier = relative.as_posix().replace("/", ".")[:-5]
-            with base_path.open("r", encoding="utf-8") as file:
-                content = file.read()
-            template = BaseTemplate.compile(content, moduleName=identifier,
-                    baseclass=BaseTemplate)
-            print(f"Loading base template {identifier}.")
-
 
 async def hello(request):
     session = await get_session(request)
