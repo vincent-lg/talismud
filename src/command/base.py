@@ -120,7 +120,7 @@ class Command:
         # ...
     ```
 
-    Becasue we haven't defined a `category` class variable, a
+    Because we haven't defined a `category` class variable, a
     `CATEGORY` top-level variable will be searched in the module
     itself.  Since we haven't defined one, it will be searched in the
     parent package (that is, in our 'command/admin/__init.py' file).
@@ -148,6 +148,21 @@ class Command:
     def session(self):
         return self.character and self.character.session or None
 
+    @property
+    def db(self):
+        """Return the attribute handler for command storage."""
+        if (handler := getattr(self, "cached_db_handler", None)):
+            return handler
+        
+        from data.handlers import AttributeHandler
+        if self.character is None:
+            raise ValueError("the character is not set, can't access attributes")
+    
+        handler = AttributeHandler(self.character)
+        handler.subset = f"cmd.{self.layer}.{self.name}"
+        self.cached_db_handler = handler
+        return handler
+    
     @classmethod
     def can_run(cls, character) -> bool:
         """

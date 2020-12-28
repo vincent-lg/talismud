@@ -29,3 +29,6 @@ class Roll(Command):
                 f"You roll a {sides}-sided dice {rolls} times on the table... "
                 f"and get a {number}!"
         )
+        old_number = self.db.get("number", 0)
+        await self.msg(f"Old number: {self.db.number if old_number else 'not set'}")
+        self.db.number = number

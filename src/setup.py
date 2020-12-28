@@ -1,6 +1,7 @@
 ﻿import distutils
 import opcode
 import os
+import platform
 import shutil
 
 from cx_Freeze import setup, Executable
@@ -19,8 +20,12 @@ portal = Executable(
 
 graphical = Executable(
     script="graphical.py",
-    base="Win32GUI",
+    base="Win32GUI" if platform.system() == "Windows" else None,
 )
+
+executables = [game, portal, talismud]
+if platform.system() == "Windows":
+    executables.append(graphical)
 
 distutils_path = os.path.join(os.path.dirname(opcode.__file__), 'distutils')
 includefiles = [
@@ -28,6 +33,17 @@ includefiles = [
     # The 'pubsub' package has to be copied from the virtual environment
     #(os.path.join(os.environ["VIRTUAL_ENV"], 'lib', 'site-packages', 'pubsub', 'utils'), 'lib/pubsub/utils'),
 ]
+
+packages = [                    "aiohttp", "aiohttp_session.cookie_storage",
+        "async_timeout", "beautifultable", "Cheetah.DummyTransaction",
+        "Cheetah.Template", "cryptography",
+        "logbook", "pony.orm.dbproviders.sqlite", "yaml",
+]
+
+if platform.system() == "Windows":
+    package.append(" bui")
+    package.append("ctypes.wintypes")
+    package.append("pubsub.pub")
 
 setup(
     name = "TalisMUD",
@@ -38,15 +54,8 @@ setup(
             "excludes": ["_gtkagg", "_tkagg", "bsddb", "distutils", "curses",
                     "numpy", "pywin.debugger", "pywin.debugger.dbgcon",
                     "pywin.dialogs", "tcl", "Tkconstants", "Tkinter"],
-            "packages": [
-                    "aiohttp", "aiohttp_session.cookie_storage",
-                    "async_timeout", "beautifultable", "bui",
-                    "Cheetah.DummyTransaction", "Cheetah.Template",
-                    "cryptography", "ctypes.wintypes",
-                    "logbook", "pony.orm.dbproviders.sqlite",
-                    "pubsub.pub", "yaml",
-            ],
+            "packages": packages,
             #"namespace_packages": ["zope.interface"],
     }},
-    executables = [game, graphical, portal, talismud]
+    executables = executables
 )
