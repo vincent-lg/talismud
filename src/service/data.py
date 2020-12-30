@@ -39,6 +39,7 @@ from data.base import db
 from data.search import search_permission
 from service.base import BaseService
 import settings
+from tools.delay import Delay
 
 # Logger
 logger = Logger()
@@ -79,6 +80,7 @@ class Service(BaseService):
         """Clean the service up before shutting down."""
         if self.init_task:
             self.init_task.cancel()
+        Delay.persist(db)
         db_session.__exit__()
 
     async def connect_to_DB(self):
@@ -123,7 +125,7 @@ class Service(BaseService):
 
         if start_room or return_room:
             commit()
-        db.Delay.schedule()
+        db.Delay.restore()
         db.BlueprintRecord.apply_all()
 
     def create_session(self, session_id):

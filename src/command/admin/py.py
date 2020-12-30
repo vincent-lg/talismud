@@ -32,8 +32,8 @@ class Py(Command):
             except Exception:
                 await self.msg(traceback.format_exc())
         except Exception:
-            await self.msg(traceback.format_exc())
+            await self.msg(traceback.format_exc(), raw=True)
         else:
-            await self.msg(str(result))
+            await self.msg(str(result), raw=True)
 
         await self.msg(">>>")

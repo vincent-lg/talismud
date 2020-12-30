@@ -44,7 +44,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Optional, Union
 
-from data import Delay
+from tools.delay import Delay
 
 class BaseContext:
 
@@ -319,6 +319,6 @@ class BaseContext:
         await self.msg("What to do?")
 
     @staticmethod
-    def call_in(seconds, callable, *args, **kwargs):
+    def call_in(seconds, callback, *args, **kwargs):
         """Call a function in X seconds."""
-        Delay.call_in(seconds, callable, *args, **kwargs)
+        Delay.schedule(seconds, callback, *args, **kwargs)

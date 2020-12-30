@@ -68,7 +68,7 @@ class Password(BaseContext):
         else:
             account.options["wrong_password"] = True
             await self.msg("Incorrect password.  Please try again in 3 seconds.")
-            self.call_in(3, self.allow_new_password(account))
+            self.call_in(3, self.allow_new_password, account)
 
     async def allow_new_password(self, account):
         """Allow to enter a new password."""
