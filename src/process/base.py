@@ -1,4 +1,4 @@
-# Copyright (c) 2020, LE GOFF Vincent
+# Copyright (c) 2020-20201, LE GOFF Vincent
 # All rights reserved.
 
 # Redistribution and use in source and binary forms, with or without
@@ -175,7 +175,7 @@ class Process(metaclass=ABCMeta):
         Run the specified command, reutning its status.
 
         Args:
-            command 9str): the command to run.
+            command (str): the command to run.
 
         """
         if platform.system() != 'Windows':
@@ -216,16 +216,20 @@ class Process(metaclass=ABCMeta):
             command = process_name
             command += ".exe" if platform.system() == 'Windows' else ""
 
-        if platform.system() != 'Windows':
+        stdout = stderr = PIPE
+        if platform.system() == 'Windows':
+            if frozen:
+                stdout = stderr = None
+        elif platform.system() == "Linux":
+            if frozen:
+                command = "./" + command
             command = command.split(" ")
 
+        print(platform.system(), frozen, command)
         self.logger.debug(
             f"Starting the {process_name!r} process: {command!r}"
         )
-        if frozen:
-            process = Popen(command, creationflags=creationflags)
-        else:
-            process = Popen(command, stdout=PIPE, stderr=PIPE,
-                creationflags=creationflags)
+        process = Popen(command, stdout=stdout, stderr=stderr,
+            creationflags=creationflags)
 
         return process
