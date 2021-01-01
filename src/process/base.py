@@ -225,7 +225,6 @@ class Process(metaclass=ABCMeta):
                 command = "./" + command
             command = command.split(" ")
 
-        print(platform.system(), frozen, command)
         self.logger.debug(
             f"Starting the {process_name!r} process: {command!r}"
         )
