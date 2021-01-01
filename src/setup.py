@@ -41,9 +41,9 @@ packages = [                    "aiohttp", "aiohttp_session.cookie_storage",
 ]
 
 if platform.system() == "Windows":
-    package.append(" bui")
-    package.append("ctypes.wintypes")
-    package.append("pubsub.pub")
+    packages.append("bui")
+    packages.append("ctypes.wintypes")
+    packages.append("pubsub.pub")
 
 setup(
     name = "TalisMUD",
