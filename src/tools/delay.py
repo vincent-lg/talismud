@@ -194,6 +194,7 @@ class Delay:
     def persist(cls, db):
         """Persist all non-persistent delays."""
         for id, delay in cls._delays.items():
-            pickled = cls._pickled(delay.callback, delay.args, delay.kwargs)
-            db.Delay(expire_at=delay.expire_at, pickled=pickled)
-            logger.debug(f"Persisting {delay!r} in the database.")
+            if delay.persistent is None:
+                pickled = cls._pickled(delay.callback, delay.args, delay.kwargs)
+                db.Delay(expire_at=delay.expire_at, pickled=pickled)
+                logger.debug(f"Persisting {delay!r} in the database.")

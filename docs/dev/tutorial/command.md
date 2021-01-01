@@ -503,7 +503,27 @@ And the same applies to two other details:
 * Permissions: permissions are specified on an individual basis by modifying the `permissions` class attribute of a command.  But again, if the command doesn't have this class attribute, TalisMUD will try to find a `PERMISSIONS` top-level variable in the module, then in the parent package, then in the grandparent package, and so on.  In our example, all commands under the "admin" package will inherit the same permissions (`"admin"`).  You don't have to be careful about permissions and you can easily change them, if you want.
 * Command layers: command layers are defined in the `layer` class variable.  If not found, a `LAYER` top-level variable will be searched in the module, the parent package, the grandparent package and so on until this information is found.
 
-We haven't player with command layers in this tutorial.  This topic is a bit more advanced and its use case might be less common, but there's a full [tutorial about command layers](layer.md) you can go to if you want more information on this topic.
+We haven't played with command layers in this tutorial.  This topic is a bit more advanced and its use case might be less common, but there's a full [tutorial about command layers](layer.md) you can go to if you want more information on this topic.
+
+## ... and much more
+
+This tutorial, however long, was an introduction to commands.  Many other topics are related to commands, or explore their usage in more details.  So if you find a question that's not answered here, check the list below to see if your topic is there... and if not, don't hesitate to [contact TalisMUD's developers](../../contact.html).
+
+*   How to store data in commands?
+
+    This can be answered in two ways: if you want to store some information for this command and the player using it, you should use the [command storage](command-storage.md).  If, on the other hand, you want to store information related to the player, and not linked to the command, it might be time to learn about the [database and how it works](database.md).
+
+*   How to pause for a delay in commands?
+
+    Often, you'll find you need to pause a command for some time.  Learn how to [handle delays in commands](command-delay.md) to do that.
+
+*   How can a command open a menu?
+
+    The concept of menus in text-based games can refer to several things.  However, the most common use case is a question asked to the player, where she might have to choose in a choice.  Menus can be much more complicated, they can be used by builders to create for instance.  In TalisMUD, menus are described in a tool (simply called `Menu` for that matter).  Read the following tutorial [to learn how menus can be created and used in commands](command-menus.md).
+
+*   Can a command display soeme kind of table?
+
+    TalisMUD relies on another tool, called `table`, to display information in a text-based representation.  Although it doesn't sound that hard to code that yourself, the provided tool handles cell wrapping (if text is too big for a column), coloring (if text contains color codes) and different kinds of border, along with other features.  Read [this tutorial on tables](table.md) for more information.
 
 ## Troubleshooting
 

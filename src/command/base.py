@@ -29,14 +29,16 @@
 
 """Base class for commands."""
 
+from datetime import timedelta
 from importlib import import_module
 import inspect
 from pathlib import Path
 import traceback
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Callable, Dict, Optional, Sequence, Union
 
 from command.args import ArgumentError, CommandArgs, Namespace
 from command.log import logger
+from tools.delay import Delay
 
 NOT_SET = object()
 
@@ -153,16 +155,21 @@ class Command:
         """Return the attribute handler for command storage."""
         if (handler := getattr(self, "cached_db_handler", None)):
             return handler
-        
+
         from data.handlers import AttributeHandler
         if self.character is None:
             raise ValueError("the character is not set, can't access attributes")
-    
+
         handler = AttributeHandler(self.character)
         handler.subset = f"cmd.{self.layer}.{self.name}"
         self.cached_db_handler = handler
         return handler
-    
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        state.pop("cached_db_handler", None)
+        return state
+
     @classmethod
     def can_run(cls, character) -> bool:
         """
@@ -233,6 +240,20 @@ class Command:
 
         """
         await self.msg(f"Great!  You reached the command {self.name}.")
+
+    def call_in(self, *args, **kwargs):
+        """
+        Schedule a callback to run in X seconds.
+
+        Args:
+            delay (int or float or timedelta): the delay (in seconds).
+            callback (Callable): the callback.  It can be
+                    a synchronous or asynchronous function.
+        Additional positional or keyword arguments will be sent to the
+        callback when it's time to execute it.
+
+        """
+        return Delay.schedule(*args, **kwargs)
 
     async def parse_and_run(self):
         """

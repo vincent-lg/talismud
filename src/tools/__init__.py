@@ -41,7 +41,3 @@ is looked up in the deeper package first, and then, if not found,
 in parent packages.
 
 """
-
-from command.args import CommandArgs
-from command.base import Command
-from command.layer import CommandLayer, find_command
