@@ -327,7 +327,7 @@ class Service(BaseService):
         sent isn't of much use.
 
         """
-        pass
+        self.logger.info("An administrator account has been created.")
 
     async def handle_shell(self, reader, code: str):
         """
@@ -383,4 +383,3 @@ class Service(BaseService):
         writer = self.hosts.get(reader, None)
         if success and writer:
             await crux.send_cmd(writer, "result", args)
-

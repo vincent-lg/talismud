@@ -165,6 +165,23 @@ class Service(BaseService):
         self.sessions[session_id] = session
         await session.context.refresh()
 
+    async def handle_disconnect_session(self, reader, session_id):
+        """
+        Handle when Telnet asks to disconnect a session.
+
+        This is mostly useful when Telnet is aware a connection has
+        ended, but the game doesn't yet know.  This usually happens
+        in case of error.
+
+        Args:
+            session_id (Uuid): the session ID.
+
+        """
+        session = db.Session.get(uuid=session_id)
+        if session:
+            self.logger.info(f"Disconnect and delete the session {session_id}")
+            session.delete()
+
     async def handle_input(self, reader, session_id, command):
         """
         Handle a received command from a Telnet-like network.

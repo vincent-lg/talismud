@@ -98,7 +98,7 @@ class Service(CmdMixin, BaseService):
         """Create the CRUX server."""
         interface = "0.0.0.0" if settings.PUBLIC_ACCESS else "127.0.0.1"
         port = settings.TELNET_SSL_PORT if ssl else settings.TELNET_PORT
-        self.logger.debug(
+        self.logger.info(
             f"telnet{' SSL' if ssl else ''}: preparing to listen on "
             f"{interface}, port {port}"
         )
@@ -143,6 +143,7 @@ class Service(CmdMixin, BaseService):
         addr = writer.get_extra_info('peername')
         session_id = uuid4()
         await self.new_session(session_id, reader, writer)
+        self.logger.info(f"telnet: connection from {addr}: new session {session_id}")
 
         try:
             await self.read_input(reader)
@@ -189,7 +190,7 @@ class Service(CmdMixin, BaseService):
                 # Windows \r\n are replaced with \n
                 line = line.replace(b"\r\n", b"\n")
                 # MAC \r are replaced by \n
-                line.replace(b"\r", b"\n")
+                line = line.replace(b"\r", b"\n")
 
                 # Now all should be Unix-like simple \n
                 if b"\n" in line:
@@ -212,12 +213,17 @@ class Service(CmdMixin, BaseService):
         if writer is None:
             self.logger.error(f"telnet: connection was lost with a client, but the associated writer cannot be found.")
         else:
-            self.logger.debug(f"telnet: the connection to a client {session_id} was closed.")
+            self.logger.info(f"telnet: the connection to a client {session_id} was closed.")
 
             try:
                 del self.sessions[session_id]
             except KeyError:
                 pass
+            finally:
+                writer = self.parent.game_writer
+                if writer:
+                    await self.CRUX.send_cmd(writer, "disconnect_session",
+                            dict(session_id=session_id))
 
     async def new_session(self, session_id, reader, writer):
         """
@@ -229,9 +235,9 @@ class Service(CmdMixin, BaseService):
             writer (StreamWriter): the session writer.
 
         """
-        self.logger.debug(f"telnet: new connection, session ID {session_id}")
         self.sessions[session_id] = (reader, writer)
         self.readers[reader] = (session_id, writer)
+        self.logger.debug(f"telnet: new connection, session ID {session_id}")
         writer = self.parent.game_writer
         if writer:
             await self.CRUX.send_cmd(writer, "new_session", dict(session_id=session_id))
