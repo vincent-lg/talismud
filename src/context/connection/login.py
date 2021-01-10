@@ -36,11 +36,11 @@ they can enter commands).
 
 """
 
-from context.base import BaseContext
+from context.session_context import SessionContext
 from data.room import Room
 import settings
 
-class Login(BaseContext):
+class Login(SessionContext):
 
     """Ghost context to connect a character to an active session."""
 

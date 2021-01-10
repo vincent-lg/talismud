@@ -36,7 +36,7 @@ from uuid import UUID, uuid4
 
 from pony.orm import Optional, PrimaryKey, Required, Set
 
-from context.base import BaseContext
+from context.base import CONTEXTS
 from data.base import db, PicklableEntity
 from data.decorators import lazy_property
 from data.handlers import OptionHandler
@@ -68,7 +68,7 @@ class Session(PicklableEntity, db.Entity):
     """
 
     uuid = PrimaryKey(UUID, default=uuid4)
-    context_path = Required(str, max_len=64)
+    context_path = Required(str)
     account = Optional("Account")
     character = Optional("Character")
     binary_options = Required(bytes, default=pickle.dumps({}))
@@ -76,13 +76,13 @@ class Session(PicklableEntity, db.Entity):
     @lazy_property
     def context(self):
         """Find the context."""
-        Context = BaseContext.find_context(self.context_path)
+        Context = CONTEXTS[self.context_path]
         return Context(self)
 
     @context.setter
     def context(self, context):
         """Change the session's context."""
-        self.context_path = type(context).__module__
+        self.context_path = context.pyname
 
     @lazy_property
     def options(self):

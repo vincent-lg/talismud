@@ -28,15 +28,61 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-"""Log configuration for commands."""
+"""Contexts specific to characters.
 
-from logbook import FileHandler, Logger
+Character contexts are used when a character has logged in.  Contrary
+to session contexts (see `session_context.py`), character contexts
+can be stacked simultaneously.
 
-logger = Logger()
-file_handler = FileHandler("logs/commands.log",
-        encoding="utf-8", level="DEBUG", delay=True)
-file_handler.format_string = (
-        "{record.time:%Y-%m-%d %H:%M:%S.%f%z} [{record.level_name}] "
-        "{record.message}"
-)
-logger.handlers.append(file_handler)
+"""
+
+from typing import Union
+
+from context.base import BaseContext
+
+class CharacterContext(BaseContext):
+
+    """
+    Character context, to be used when the character is logged in.
+    """
+
+    lock_input = False
+
+    def __init__(self, character):
+        self.character = character
+
+    async def msg(self, text: Union[str, bytes]):
+        """
+        Send some text to the context character.
+
+        Args:
+            text (str or bytes): text to send.
+
+        """
+        await self.character.msg(text)
+
+    async def move(self, context_path: str):
+        """
+        Move to another context.
+
+        This is not supported for character contexts, the context stack
+        should be used instead.
+
+        """
+        raise ValueError(
+                "not supported in character contexts, "
+                "use the context stack instead"
+        )
+
+    def cannot_find(command: str) -> str:
+        """
+        Error to send when the command cannot be found.
+
+        This is called when the command cannot be found in this context,
+        or anywhere in the command stack.
+
+        Args:
+            command (str): the command.
+
+        """
+        return "that was an error, and it wasn't caught"

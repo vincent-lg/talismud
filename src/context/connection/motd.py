@@ -29,9 +29,9 @@
 
 """Message of the Day context, displayed when one connects to TalisMUD."""
 
-from context.base import BaseContext
+from context.session_context import SessionContext
 
-class MOTD(BaseContext):
+class MOTD(SessionContext):
 
     """
     Context called when the user first connects to TalisMUD.

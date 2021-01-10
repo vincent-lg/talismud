@@ -37,10 +37,10 @@ context than an active context.
 
 from pony.orm import commit, OrmError
 
-from context.base import BaseContext
+from context.session_context import SessionContext
 from data.account import Account
 
-class Complete(BaseContext):
+class Complete(SessionContext):
 
     """Ghost context to create an account."""
 

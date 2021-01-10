@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, LE GOFF Vincent
+# Copyright (c) 2020-20201, LE GOFF Vincent
 # All rights reserved.
 
 # Redistribution and use in source and binary forms, with or without
@@ -28,15 +28,47 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-"""Log configuration for commands."""
+"""Wrapper context, to wrap a command layer in a chqaracter context."""
 
-from logbook import FileHandler, Logger
+from command.layer import LAYERS
+from context.character_context import CharacterContext
 
-logger = Logger()
-file_handler = FileHandler("logs/commands.log",
-        encoding="utf-8", level="DEBUG", delay=True)
-file_handler.format_string = (
-        "{record.time:%Y-%m-%d %H:%M:%S.%f%z} [{record.level_name}] "
-        "{record.message}"
-)
-logger.handlers.append(file_handler)
+class Layer(CharacterContext):
+
+    """Layer context, to wrap a command layer in a character context."""
+
+    def __init__(self, character):
+        super().__init__(character)
+        self.layer = None
+        self.layer_name = None
+
+    def __str__(self):
+        if (layer := self.layer):
+            layer = layer.name
+        else:
+            layer = ""
+
+        return f"{self.pyname}({layer})"
+
+    async def handle_input(self, command: str):
+        """Handle the user input, redirect to the command layer."""
+        command = self.layer.find_command(command)
+        if command is None:
+            return
+
+        # Otherwise, parse the command
+        await command.parse_and_run()
+        return True
+
+    def cannot_find(self, command: str) -> str:
+        """
+        Error to send when the command cannot be found.
+
+        This is called when the command cannot be found in this context,
+        or anywhere in the command stack.
+
+        Args:
+            command (str): the command.
+
+        """
+        return self.layer.cannot_find(command)

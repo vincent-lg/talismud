@@ -36,8 +36,7 @@ import typing as ty
 
 from pony.orm import Optional, Required, Set
 
-from command.layer import StaticCommandLayer
-from command.stack import CommandStack
+from context.stack import ContextStack
 from data.base import db, PicklableEntity
 from data.decorators import lazy_property
 from data.handlers import (
@@ -54,7 +53,7 @@ class Character(PicklableEntity, db.Entity):
     session = Optional("Session")
     account = Optional("Account")
     created_on = Required(datetime, default=datetime.utcnow)
-    db_command_stack = Optional(bytes)
+    binary_context_stack = Optional(bytes)
 
     @lazy_property
     def db(self):
@@ -102,23 +101,24 @@ class Character(PicklableEntity, db.Entity):
                 This scripting event is called after a player has connected to this character, either has part of standard login, or after an admin has taken control of this character.
         """)
 
+    @lazy_property
+    def context_stack(self):
+        """Return the stored or newly-build context stack."""
+        stored = self.binary_context_stack
+        if stored:
+            return pickle.loads(stored)
+
+        # Create a new context stack
+        stack = ContextStack(self)
+
+        # Add the static command layer as first layer
+        stack.add_command_layer("static")
+        return stack
+
     async def move_to(self, exit):
         """Move to the specified exit."""
         self.location = exit.destination_for(self.location)
         await self.msg(self.location.look(self))
-
-    @lazy_property
-    def command_stack(self):
-        """Return the stored or newly-bulid command stack."""
-        stored = self.db_command_stack
-        if stored:
-            return pickle.loads(stored)
-
-        # Create a new command stack
-        stack = CommandStack(self)
-        # Add the static command layer as first layer
-        stack.add_layer(StaticCommandLayer)
-        return stack
 
     async def msg(self, text, variables=None, raw: ty.Optional[bool] = False):
         """

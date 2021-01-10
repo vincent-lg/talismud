@@ -29,10 +29,10 @@
 
 """Name context, to create a new character's name."""
 
-from context.base import BaseContext
+from context.session_context import SessionContext
 import settings
 
-class Name(BaseContext):
+class Name(SessionContext):
 
     """
     Context to enter the character's new name.

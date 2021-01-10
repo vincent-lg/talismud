@@ -29,10 +29,10 @@
 
 """Confirm password context, displayed when one wishes to confirm a new password."""
 
-from context.base import BaseContext
+from context.session_context import SessionContext
 import settings
 
-class ConfirmPassword(BaseContext):
+class ConfirmPassword(SessionContext):
 
     """
     Context to confirm a new password for a new account.

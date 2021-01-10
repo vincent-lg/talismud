@@ -38,15 +38,21 @@ context (say, the creation of the username, for instance, or the password).
 
 """
 
+from abc import ABCMeta, abstractmethod
 from importlib import import_module
 import inspect
 from pathlib import Path
 from textwrap import dedent
 from typing import Optional, Union
 
+from context.log import logger
+import settings
 from tools.delay import Delay
 
-class BaseContext:
+# Constants
+CONTEXTS = {}
+
+class BaseContext(metaclass=ABCMeta):
 
     """
     Class defining a context.
@@ -124,14 +130,15 @@ class BaseContext:
 
     """
 
+    pyname = "UNSET"
     text = ""
 
-    def __init__(self, session):
-        self.session = session
+    def __str__(self):
+        return self.pyname
 
     async def greet(self) -> Optional[str]:
         """
-        Greet the session.
+        Greet the session or character.
 
         This method is called when the session first connects to this
         context or when it calls for a "refresh".  If the context
@@ -152,107 +159,37 @@ class BaseContext:
             if isinstance(text, str):
                 text = dedent(text.strip("\n"))
 
-            await self.session.msg(text)
+            await self.msg(text)
 
     async def enter(self):
         """
-        The session first enters in this context.
+        The session or character first enters in this context.
 
         You can ovverride this method to do something when the session
-        enters the context for the first time.
+        or character enters the context for the first time.
 
         """
         await self.refresh()
 
     async def leave(self):
         """
-        The session is about to leave this context.
+        The session or character is about to leave this context.
 
         Override this method to perform some operations on the session
-        when it leaves the context.
+        or character when it leaves the context.
 
         """
         pass
 
-    async def move(self, context_path: str):
+    async def input(self, command: str):
         """
-        Move to a new context.
-
-        You have to specify the new context as a Python path, like
-        "connection.motd".  This path is a shortcut to the
-        "context.connection.motd" module and then a context will be
-        searched in this module.  You don't have to specify the "context"
-        part of the Python path, as it will be inferred.
+        What to do when no user input matches in this context.
 
         Args:
-            context_path (str): path to the module where the new context is.
+            command (str): the full user input.
 
         """
-        NewContext = self.find_context(context_path)
-        new_context = NewContext(self.session)
-        await self.leave()
-        self.session.context = new_context
-        await new_context.enter()
-
-    async def msg(self, text: Union[str, bytes]):
-        """
-        Send some text to the context session.
-
-        Args:
-            text (str or bytes): text to send.
-
-        """
-        await self.session.msg(text)
-
-    @staticmethod
-    def find_context(context_path):
-        """Find and return the context in the specified module."""
-        # Search for the module to begin
-        parts = context_path.split(".")
-        parts[-1] += ".py"
-        possible_paths = (
-            Path().joinpath("context", *parts),
-            Path().joinpath(*parts),
-        )
-
-        path = None
-        for possible in possible_paths:
-            if possible.exists():
-                path = possible
-                break
-
-        if path is None:
-            possible_paths = ", ".join([str(possible) for possible in
-                    possible_paths])
-            raise ModuleNotFoundError(
-                    f"can't find {context_path!r} to import, tried "
-                    f"{possible_paths}"
-            )
-
-        # Try to import the path
-        pypath = ".".join(path.parts)
-        pypath = pypath[:-3]
-
-        # Try to import the module
-        module = import_module(pypath)
-
-        # The context should be a subclass from BaseContext
-        NewContext = None
-        for key, value in module.__dict__.items():
-            try:
-                if value is not BaseContext and issubclass(value, BaseContext):
-                    NewContext = value
-                    break
-            except TypeError:
-                continue
-
-        if NewContext is None:
-            raise ValueError(
-                    f"cannot find the context class in {pypath}, "
-                    "no subclass of `BaseContext` defined"
-            )
-
-        return NewContext
+        await self.msg("What to do?")
 
     async def handle_input(self, user_input: str):
         """
@@ -286,12 +223,12 @@ class BaseContext:
             user_input (str): the user input.
 
         """
-        try:
+        if " " in user_input:
             command, args = user_input.split(" ", 1)
-        except ValueError:
+        else:
             command, args = user_input, ""
 
-        # Try to find a input_{command} method
+        # Try to find an input_{command} method
         method = getattr(self, f"input_{command}", None)
         if method:
             # Pass the command argument if the method signature asks for them
@@ -302,23 +239,129 @@ class BaseContext:
             return await method(args)
 
         method = self.input
-        signature = inspect.signature(method)
-        if len(signature.parameters) == 0:
-            return await method()
-
         return await method(user_input)
 
-    async def input(self, command: str):
+    @abstractmethod
+    async def move(self, context_path: str):
         """
-        What to do when no user input matches in this context.
+        Move to a new context.
+
+        You have to specify the new context as a Python path, like
+        "connection.motd".  This path is a shortcut to the
+        "context.connection.motd" module (unless it has been replaced
+        by a plugin).
 
         Args:
-            command (str): the full user input.
+            context_path (str): path to the module where the new context is.
+
+        Note:
+            Character contexts cannot be moved with this method.  Use
+            the context stack on the character
+            (`character.context_stack.add(...)` instead).
 
         """
-        await self.msg("What to do?")
+        pass
+
+    @abstractmethod
+    async def msg(self, text: Union[str, bytes]):
+        """
+        Send some text to the context.
+
+        Args:
+            text (str or bytes): text to send.
+
+        """
+        pass
 
     @staticmethod
     def call_in(seconds, callback, *args, **kwargs):
         """Call a function in X seconds."""
         Delay.schedule(seconds, callback, *args, **kwargs)
+
+def load_contexts(raise_exception: Optional[bool] = False):
+    """
+    Load the contexts dynamically.
+
+    This function is called when the game starts.
+
+    """
+    from context.character_context import CharacterContext
+    from context.session_context import SessionContext
+    parent = Path()
+    paths = (
+        parent / "context",
+    )
+
+    for plugin in settings.PLUGINS:
+        paths += (parent / plugin / "context", )
+
+    exclude = (
+        parent / "context" / "base.py",
+        parent / "context" / "character_context.py",
+        parent / "context" / "log.py",
+        parent / "context" / "session_context.py",
+        parent / "context" / "stack.py",
+    )
+    forbidden = (BaseContext, CharacterContext, SessionContext)
+
+    # Search the context files
+    logger.debug("Preparing to load all contexts...")
+    loaded = 0
+    for path in paths:
+        for file_path in path.rglob("*.py"):
+            if file_path in exclude or any(
+                    to_ex in file_path.parents for to_ex in exclude):
+                continue                                # Search for the module to begin
+
+            if file_path.name.startswith("_"):
+                continue
+
+            # Assume this is a module containing ONE context
+            relative = file_path.relative_to(path)
+            pypath = ".".join(file_path.parts)[:-3]
+            py_unique = ".".join(relative.parts)[:-3]
+
+            # Try to import
+            try:
+                module = import_module(pypath)
+            except Exception:
+                logger.exception(
+                        f"  An error occurred when importing {pypath}:")
+                if raise_exception:
+                    raise
+                continue
+
+            # Explore the module to try to import ONE context.
+            NewContext = None
+            for name, value in module.__dict__.items():
+                if name.startswith("_"):
+                    continue
+
+                if (isinstance(value, type) and value not in forbidden
+                        and issubclass(value, BaseContext)):
+                    if NewContext is not None:
+                        NewContext = ...
+                        break
+                    else:
+                        NewContext = value
+
+            if NewContext is None:
+                logger.warning(f"No context could be found in {pypath}.")
+                continue
+            elif NewContext is ...:
+                logger.warning(
+                        "More than one contexts are present "
+                        f"in module {pypath}, not loading any."
+                )
+                continue
+            else:
+                loaded += 1
+                logger.debug(
+                        f"  Load the context in {pypath} (name={py_unique!r})"
+                )
+                CONTEXTS[py_unique] = NewContext
+                NewContext.pyname = py_unique
+
+    s = "s" if loaded > 1 else ""
+    was = "were" if loaded > 1 else "was"
+    logger.debug(f"{loaded} context{s} {was} loaded successfully.")

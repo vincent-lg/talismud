@@ -31,11 +31,11 @@
 
 from textwrap import dedent
 
-from context.base import BaseContext
+from context.session_context import SessionContext
 from data import Character
 import settings
 
-class Characters(BaseContext):
+class Characters(SessionContext):
 
     """Context do display the account's characters."""
 

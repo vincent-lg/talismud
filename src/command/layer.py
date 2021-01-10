@@ -41,8 +41,18 @@ import settings
 
 # Constants
 COMMANDS_BY_LAYERS = defaultdict(dict)
+LAYERS = {}
 
-class CommandLayer:
+class MetaCommandLayer(type):
+
+    """Metaclass for command layers."""
+
+    def __init__(cls, cls_name, bases, dct):
+        if (name := cls.name):
+            LAYERS[name] = cls
+
+
+class CommandLayer(metaclass=MetaCommandLayer):
 
     """
     Abstract command layer.
@@ -64,9 +74,7 @@ class CommandLayer:
 
     """
 
-    name = "unknown"# Command layer name, can be a property
-    active = False # The active command context
-    propagate = True # Non-matching commands can propagate to the next layer
+    name = "" # Command layer unique name
 
     def __init__(self, character=None):
         self.character = character
@@ -243,7 +251,6 @@ def load_commands(raise_exception: Optional[bool] = False):
         parent_dir / "base.py",
         parent_dir / "log.py",
         parent_dir / "layer.py",
-        parent_dir / "stack.py",
     ]
 
     can_contain = (parent_dir, )

@@ -29,9 +29,9 @@
 
 """Account password context."""
 
-from context.base import BaseContext
+from context.session_context import SessionContext
 
-class Password(BaseContext):
+class Password(SessionContext):
 
     """Context to enter the account's password."""
 

@@ -29,10 +29,10 @@
 
 """Create password context, displayed when one wishes to create a new account."""
 
-from context.base import BaseContext
+from context.session_context import SessionContext
 import settings
 
-class CreatePassword(BaseContext):
+class CreatePassword(SessionContext):
 
     """
     Context to create a new password for a new account.

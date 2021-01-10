@@ -29,11 +29,11 @@
 
 """New email context, displayed when one wishes to create an email address."""
 
-from context.base import BaseContext
+from context.session_context import SessionContext
 from data.account import Account
 import settings
 
-class Email(BaseContext):
+class Email(SessionContext):
 
     """
     Context to set the account email address.

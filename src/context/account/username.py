@@ -29,11 +29,11 @@
 
 """New account context, displayed when one wishes to create a new account."""
 
-from context.base import BaseContext
+from context.session_context import SessionContext
 from data.account import Account
 import settings
 
-class Username(BaseContext):
+class Username(SessionContext):
 
     """
     Context called when the user wishes to create a new account.
