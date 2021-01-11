@@ -13,10 +13,15 @@ class Py(Command):
 
     alias = "python"
     args = CommandArgs()
-    args.add_argument("text", dest="code")
+    args.add_argument("text", dest="code", optional=True)
 
-    async def run(self, code):
+    async def run(self, code=""):
         """Run the command."""
+        if not code:
+            context = self.character.context_stack.add_context("admin.python")
+            await context.enter()
+            return
+
         # Create the global variables
         vars = {
                 "self": self.character,

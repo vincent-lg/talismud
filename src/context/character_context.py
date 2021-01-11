@@ -36,7 +36,7 @@ can be stacked simultaneously.
 
 """
 
-from typing import Union
+from typing import Optional, Union
 
 from context.base import BaseContext
 
@@ -73,6 +73,18 @@ class CharacterContext(BaseContext):
                 "not supported in character contexts, "
                 "use the context stack instead"
         )
+
+    async def quit(self, verbose: Optional[bool] = True):
+        """
+        Quit the context.
+
+        Args:
+            verbose (bool, defaults True): should `leave` be called beforehand?
+
+        """
+        self.character.context_stack.remove(self)
+        if verbose:
+            await self.leave()
 
     def cannot_find(command: str) -> str:
         """

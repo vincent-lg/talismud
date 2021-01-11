@@ -72,7 +72,8 @@ class ContextStack:
 
         return f"<ContextStack {', '.join(contexts)}>"
 
-    def add_context(self, context_path: str, active: Optional[bool] = True):
+    def add_context(self, context_path: str,
+            active: Optional[bool] = True):
         """
         Add a context to the command stack.
 
@@ -90,6 +91,7 @@ class ContextStack:
         """
         NewContext = CONTEXTS[context_path]
         context = NewContext(self.character)
+
         if active or not any(c.active for c in self.contexts):
             context.active = True
             for other in self.contexts:
