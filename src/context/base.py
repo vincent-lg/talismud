@@ -245,13 +245,13 @@ class BaseContext(metaclass=ABCMeta):
             # Pass the command argument if the method signature asks for them
             signature = inspect.signature(method)
             if len(signature.parameters) == 0:
-                res = await method()
+                await method()
                 await self.send_messages()
-                return res
+                return True
 
-            res = await method(args)
+            await method(args)
             await self.send_messages()
-            return res
+            return True
 
         method = self.input
         res = await method(user_input)

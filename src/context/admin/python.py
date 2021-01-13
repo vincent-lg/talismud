@@ -59,8 +59,6 @@ class PythonConsole(CharacterContext):
             You can also use these variables (plus any you create):
                 self: the character calling this Python console.
                 db: the database endpoint.
-
-            >>>
     """
 
     def __init__(self, character):

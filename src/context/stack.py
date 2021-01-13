@@ -161,6 +161,7 @@ class ContextStack:
                 self.contexts[index - 1].active = True
 
         self.contexts.remove(context)
+        self._save()
 
     def remove_context(self, context_path: str, **kwargs):
         """
