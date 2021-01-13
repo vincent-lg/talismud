@@ -197,7 +197,6 @@ class Service(CmdMixin, BaseService):
                     for piece in line.splitlines():
                         # It is possible, though unlikely, that this loop
                         # will be called more than once.
-                        self.logger.debug(f"Process: {piece!r}.")
                         await self.send_input(session_id, piece)
                 else:
                     unprocessed = line

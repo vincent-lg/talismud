@@ -29,6 +29,7 @@
 
 """Abstract class for command layers."""
 
+import asyncio
 from collections import defaultdict
 from importlib import import_module
 from pathlib import Path
@@ -230,7 +231,8 @@ class StaticCommandLayer(CommandLayer):
 
         return self.find_command(command)
 
-def load_commands(raise_exception: Optional[bool] = False):
+def load_commands(condition: asyncio.Condition,
+        raise_exception: Optional[bool] = False):
     """
     Load all commands dynamically.
 
@@ -241,9 +243,11 @@ def load_commands(raise_exception: Optional[bool] = False):
     the value is a list of commands in this layer.
 
     Args:
+        condition (Condition): the condition to synchronize messaging.
         raise_exception (bool, optional): raise an exception in case of error.
 
     """
+    Command.condition = condition
     parent_dir = Path("command")
     exclude = [
         parent_dir / "args",

@@ -85,6 +85,7 @@ class CharacterContext(BaseContext):
         self.character.context_stack.remove(self)
         if verbose:
             await self.leave()
+        await self.send_messages()
 
     def cannot_find(command: str) -> str:
         """

@@ -30,6 +30,7 @@
 """Game service."""
 
 import asyncio
+from typing import Any
 
 from command.layer import load_commands
 from context.base import load_contexts
@@ -42,9 +43,6 @@ import settings
 
 CONSOLE = Shell({"db": db}, "<shell>")
 SCRIPTING = Scripting()
-
-load_commands()
-load_contexts()
 
 class Service(BaseService):
 
@@ -64,20 +62,26 @@ class Service(BaseService):
 
         """
         self.game_id = None
-        self.output_task = None
+        self.output_tasks = {}
         self.cmds_task = None
         self.sessions = {}
+        self.messaging = MessagingCondition()
 
     async def setup(self):
         """Set the game up."""
         self.services["host"].schedule_hook("connected", self.connected_to_CRUX)
-        self.output_task = asyncio.create_task(self.spread_output())
+        self.output_tasks["unknown"] = asyncio.create_task(
+                self.watch_unknown())
         self.cmds_task = asyncio.create_task(self.spread_cmds_to_portal())
+        load_commands(self.messaging)
+        load_contexts(self.messaging)
 
     async def cleanup(self):
         """Clean the service up before shutting down."""
-        if self.output_task:
-            self.output_task.cancel()
+        for uuid, task in tuple(self.output_tasks.items()):
+            task.cancel()
+            _ = self.output_tasks.pop(uuid, None)
+
         if self.cmds_task:
             self.cmds_task.cancel()
 
@@ -99,24 +103,70 @@ class Service(BaseService):
         self.logger.warning(f"A write error happened on the connection to CRUX, stop the process.")
         self.process.should_stop.set()
 
-    async def spread_output(self):
-        """Begin listening for the output queue."""
+    async def watch_unknown(self):
+        """Begin listening for the unknown output queue."""
         try:
-            await self.listen_for_output()
+            await self.listen_for_unknown_output()
         except asyncio.CancelledError:
             pass
         except Exception:
-            self.logger.exception("An error occurred while listening for the output queue:")
+            self.logger.exception(
+                    "An error occurred while listening for the "
+                    "unknown output queue:"
+            )
 
-    async def listen_for_output(self):
-        """Listen the output queue and send data accordingly."""
-        host = self.services["host"]
+    async def listen_for_unknown_output(self):
+        """Listen the unknown output queue and log it."""
+        queue = OUTPUT["unknown"]
         while True:
-            session_id, text = await OUTPUT.get()
+            text = await queue.get()
+
+            # Log this, as this is an error
+            self.logger.error(
+                    "Text arrived on the unknown output queue and "
+                    f"can't be delivered to its session:\n{text!r}"
+            )
+
+    async def spread_output(self, session):
+        """Begin listening for the output queue."""
+        try:
+            await self.listen_for_output(session)
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            self.logger.exception(
+                    "An error occurred while listening for the "
+                    f"output queue of {session.uuid}:"
+            )
+
+    async def listen_for_output(self, session):
+        """Listen to the output queue and send data accordingly."""
+        host = self.services["host"]
+        queue = OUTPUT[session.uuid]
+        while True:
+            text = await queue.get()
+
+            # Before sending the messages, make sure the list of
+            # running object is empty.
+            messaging = self.messaging
+            async with messaging:
+                await messaging.wait_for(lambda: len(messaging.running) == 0)
+
+            # Collect other messages from this session if available
+            while not queue.empty():
+                text += b"\n" + queue.get_nowait()
+
+            # If appropriate, add the context prompt
+            context = session.focused_context
+            prompt = context.get_prompt()
+            if prompt:
+                text += b"\n" + prompt.encode(
+                        session.options.get("encoding",
+                        settings.DEFAULT_ENCODING), errors="replace")
 
             if host.writer:
                 await host.send_cmd(host.writer, "output", dict(
-                        session_id=session_id, output=text))
+                        session_id=session.uuid, output=text))
 
     async def spread_cmds_to_portal(self):
         """Begin listening for the command queue."""
@@ -151,6 +201,14 @@ class Service(BaseService):
                 f"{'are' if count > 1 else 'is'} to be deleted.")
         to_delete.delete(bulk=True)
 
+        # Recreate the output queues and output tasks for these sessions.
+        for session in db.Session.select():
+            uuid = session.uuid
+            self.sessions[uuid] = session
+            OUTPUT[uuid] = asyncio.Queue()
+            self.output_tasks[uuid] = asyncio.create_task(
+                    self.spread_output(session))
+
     async def handle_stop_game(self, reader, game_id):
         """A new game process wants to be registered."""
         self.logger.debug(f"Receive stop_game for ID {game_id}")
@@ -165,6 +223,9 @@ class Service(BaseService):
         data = self.services["data"]
         session = data.create_session(session_id)
         self.sessions[session_id] = session
+        OUTPUT[session_id] = asyncio.Queue()
+        self.output_tasks[session_id] = asyncio.create_task(
+                self.spread_output(session))
         await session.context.refresh()
 
     async def handle_disconnect_session(self, reader, session_id):
@@ -182,6 +243,10 @@ class Service(BaseService):
         session = db.Session.get(uuid=session_id)
         if session:
             self.logger.info(f"Disconnect and delete the session {session_id}")
+            task = self.output_tasks.pop(session_id, None)
+            if task:
+                task.cancel()
+            _ = OUTPUT.pop(session_id, None)
             session.delete()
 
     async def handle_input(self, reader, session_id, command):
@@ -301,3 +366,44 @@ class Service(BaseService):
         if host.writer:
             await host.send_cmd(host.writer,
                     "result", dict(display=SCRIPTING.output, prompt=prompt))
+
+
+class MessagingCondition(asyncio.Condition):
+
+    """A condition to keep track of current messages."""
+
+    def __init__(self):
+        super().__init__()
+        self.running = set()
+
+    async def mark_as_running(self, obj: Any):
+        """
+        Mark the specified object as running.
+
+        This is usually called automatically by contexts and commands
+        that start to run.  This would signal the condition to
+        wait before delivering messages.  The condition will
+        wait until all commands and contexts have mark themselves
+        as done (see `mark_as_done`).
+
+        Args:
+            obj (Any): the running object (usually context or command).
+
+        """
+        self.running.add(obj)
+
+    async def mark_as_done(self, obj: Any):
+        """
+        Mark this object as done.
+
+        Usually this is called automatically when the context or command
+        is done executing and messages should be sent.
+
+        Args:
+            obj (Any): the running object (context or command).
+
+        """
+        self.running.discard(obj)
+
+        async with self:
+            self.notify_all()

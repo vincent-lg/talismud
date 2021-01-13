@@ -43,7 +43,9 @@ from data.handlers import OptionHandler
 import settings
 
 # Asynchronous queue of all session output messages
-OUTPUT = asyncio.Queue()
+OUTPUT = {
+    "unknown": asyncio.Queue(),
+}
 CMDS_TO_PORTAL = asyncio.Queue()
 
 class Session(PicklableEntity, db.Entity):
@@ -83,6 +85,16 @@ class Session(PicklableEntity, db.Entity):
     def context(self, context):
         """Change the session's context."""
         self.context_path = context.pyname
+
+    @property
+    def focused_context(self):
+        """Return the focused context."""
+        # If there's a character, return the character's active context.
+        if (character := self.character):
+            return character.context_stack.active_context
+
+        # Otherwise, return the session context
+        return self.context
 
     @lazy_property
     def options(self):
@@ -128,7 +140,12 @@ class Session(PicklableEntity, db.Entity):
         else:
             encoded = text
 
-        await OUTPUT.put((self.uuid, encoded))
+        try:
+            queue = OUTPUT[self.uuid]
+        except KeyError:
+            queue = OUTPUT["unknown"]
+
+        await queue.put(encoded)
 
     async def msg_portal(self, cmd_name: str, args: ty.Optional[dict] = None):
         """

@@ -131,8 +131,20 @@ class Character(PicklableEntity, db.Entity):
 
         """
         if not raw:
-            formatter = VariableFormatter(self, variables)
-            text = formatter.format(text)
+            text = self.format_msg(text, variables)
 
         if self.session:
             await self.session.msg(text)
+
+    def format_msg(self, text: str, variables=None) -> str:
+        """
+        Format the message to be sent to the character.
+
+        Args:
+            text (str): the text to send.
+            variables (dict, optional): the variables to use.
+
+        """
+        formatter = VariableFormatter(self, variables)
+        text = formatter.format(text)
+        return text

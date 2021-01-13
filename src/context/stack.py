@@ -72,6 +72,11 @@ class ContextStack:
 
         return f"<ContextStack {', '.join(contexts)}>"
 
+    @property
+    def active_context(self):
+        """Return the active context."""
+        return [context for context in self.contexts if context.active][0]
+
     def add_context(self, context_path: str,
             active: Optional[bool] = True):
         """

@@ -129,8 +129,12 @@ class PythonConsole(CharacterContext):
 
         prompt = ">>>" if self.completed else "..."
         out.seek(0)
-        await self.msg(f"{out.read()}\n{prompt}")
+        await self.msg(f"{out.read()}")
 
         # Force-save the context
         self.character.context_stack._save()
         return True
+
+    def get_prompt(self):
+        """Return the prompt to be displayed."""
+        return ">>>" if self.completed else "..."

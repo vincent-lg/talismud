@@ -46,9 +46,10 @@ class Home(SessionContext):
     text = """
         If you already have an account, enter its username.
         Otherwise, type 'new' to create a new account.
-
-        Your username:
     """
+
+    def get_prompt(self):
+        return "* Your username:"
 
     async def input_new(self):
         """The user has input 'new' to create a new account."""

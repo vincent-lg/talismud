@@ -83,5 +83,7 @@ class SessionContext(BaseContext):
         NewContext = CONTEXTS[context_path]
         new_context = NewContext(self.session)
         await self.leave()
+        await type(self).condition.mark_as_done(self)
         self.session.context = new_context
         await new_context.enter()
+        await self.send_messages()

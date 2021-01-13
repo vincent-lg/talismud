@@ -50,6 +50,10 @@ class Layer(CharacterContext):
 
         return f"{self.pyname}({layer})"
 
+    def get_prompt(self):
+        """Return the character prompt."""
+        return "HP: 100   Man: 100   End: 100"
+
     async def handle_input(self, command: str):
         """Handle the user input, redirect to the command layer."""
         command = self.layer.find_command(command)

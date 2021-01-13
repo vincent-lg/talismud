@@ -112,7 +112,6 @@ class Room(PicklableEntity, db.Entity):
             description,
             "",
             exits,
-            "HP: 100",
         ]
 
         return "\n".join(lines)

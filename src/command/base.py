@@ -191,7 +191,6 @@ class Command:
 
         return True
 
-    @classmethod
     def get_help(cls, character=None) -> str:
         """
         Return the help of a command, tailored for a character.
@@ -263,6 +262,9 @@ class Command:
         asynchronously withint a try/except block to catch errors.
 
         """
+        logger.debug("Mark as running...")
+        await type(self).condition.mark_as_running(self)
+        logger.debug(f"Running: {len(type(self).condition.running)}")
         try:
             result = self.parse()
             if isinstance(result, ArgumentError):
@@ -280,6 +282,8 @@ class Command:
                     f"An error occurred while parsing and running the "
                     f"{self.name} commnd:"
             )
+        finally:
+            await self.send_messages()
 
     async def msg(self, text: str, raw: Optional[bool] = False):
         """
@@ -290,7 +294,21 @@ class Command:
             raw (bool, optional): if True, escape braces.
 
         """
+        logger.debug(f"Send: {text}")
         await self.character.msg(text, raw=raw)
+
+    async def send_messages(self):
+        """
+        Send all messages to the character.
+
+        This will also send the context prompt, if it's active.
+
+        """
+        if self not in type(self).condition.running:
+            return
+
+        logger.debug("Mark as done")
+        await type(self).condition.mark_as_done(self)
 
     @classmethod
     def extrapolate(cls, path: Path):

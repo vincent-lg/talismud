@@ -39,6 +39,7 @@ context (say, the creation of the username, for instance, or the password).
 """
 
 from abc import ABCMeta, abstractmethod
+import asyncio
 from importlib import import_module
 import inspect
 from pathlib import Path
@@ -154,12 +155,15 @@ class BaseContext(metaclass=ABCMeta):
 
     async def refresh(self):
         """Refresh the context view."""
+        await type(self).condition.mark_as_running(self)
         text = await self.greet()
         if text is not None:
             if isinstance(text, str):
                 text = dedent(text.strip("\n"))
 
             await self.msg(text)
+
+        await self.send_messages()
 
     async def enter(self):
         """
@@ -169,7 +173,9 @@ class BaseContext(metaclass=ABCMeta):
         or character enters the context for the first time.
 
         """
+        await type(self).condition.mark_as_running(self)
         await self.refresh()
+        await self.send_messages()
 
     async def leave(self):
         """
@@ -180,6 +186,10 @@ class BaseContext(metaclass=ABCMeta):
 
         """
         pass
+
+    def get_prompt(self):
+        """Return the prompt to be displayed for this context."""
+        return ""
 
     async def input(self, command: str):
         """
@@ -223,6 +233,7 @@ class BaseContext(metaclass=ABCMeta):
             user_input (str): the user input.
 
         """
+        await type(self).condition.mark_as_running(self)
         if " " in user_input:
             command, args = user_input.split(" ", 1)
         else:
@@ -234,12 +245,18 @@ class BaseContext(metaclass=ABCMeta):
             # Pass the command argument if the method signature asks for them
             signature = inspect.signature(method)
             if len(signature.parameters) == 0:
-                return await method()
+                res = await method()
+                await self.send_messages()
+                return res
 
-            return await method(args)
+            res = await method(args)
+            await self.send_messages()
+            return res
 
         method = self.input
-        return await method(user_input)
+        res = await method(user_input)
+        await self.send_messages()
+        return res
 
     @abstractmethod
     async def move(self, context_path: str):
@@ -273,18 +290,37 @@ class BaseContext(metaclass=ABCMeta):
         """
         pass
 
+    async def send_messages(self):
+        """
+        Send all messages to the character.
+
+        This will also send the context prompt, if it's active.
+
+        """
+        if self not in type(self).condition.running:
+            return
+
+        await type(self).condition.mark_as_done(self)
+
     @staticmethod
     def call_in(seconds, callback, *args, **kwargs):
         """Call a function in X seconds."""
         Delay.schedule(seconds, callback, *args, **kwargs)
 
-def load_contexts(raise_exception: Optional[bool] = False):
+def load_contexts(condition: asyncio.Condition,
+        raise_exception: Optional[bool] = False):
     """
     Load the contexts dynamically.
 
     This function is called when the game starts.
 
+    Args:
+        condition (Condition): a condition object, to lock messaging.
+        raise_exceptions (bool, defaults `False`): should an exception
+                be raised when a context module cannot be loaded?
+
     """
+    BaseContext.condition = condition
     from context.character_context import CharacterContext
     from context.session_context import SessionContext
     parent = Path()
