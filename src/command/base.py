@@ -29,6 +29,7 @@
 
 """Base class for commands."""
 
+from contextlib import asynccontextmanager
 from datetime import timedelta
 from importlib import import_module
 import inspect
@@ -262,28 +263,24 @@ class Command:
         asynchronously withint a try/except block to catch errors.
 
         """
-        logger.debug("Mark as running...")
-        await type(self).condition.mark_as_running(self)
-        logger.debug(f"Running: {len(type(self).condition.running)}")
-        try:
-            result = self.parse()
-            if isinstance(result, ArgumentError):
-                await self.msg(str(result))
-                return
+        async with self.group_messages():
+            try:
+                result = self.parse()
+                if isinstance(result, ArgumentError):
+                    await self.msg(str(result))
+                    return
 
-            args = self.args_to_dict(result)
-            await self.run(**args)
-        except Exception:
-            # If an administrator, sends the traceback directly
-            if self.character and self.character.permissions.has("admin"):
-                await self.msg(traceback.format_exc(), raw=True)
+                args = self.args_to_dict(result)
+                await self.run(**args)
+            except Exception:
+                # If an administrator, sends the traceback directly
+                if self.character and self.character.permissions.has("admin"):
+                    await self.msg(traceback.format_exc(), raw=True)
 
-            logger.exception(
-                    f"An error occurred while parsing and running the "
-                    f"{self.name} commnd:"
-            )
-        finally:
-            await self.send_messages()
+                logger.exception(
+                        f"An error occurred while parsing and running the "
+                        f"{self.name} commnd:"
+                )
 
     async def msg(self, text: str, raw: Optional[bool] = False):
         """
@@ -294,21 +291,16 @@ class Command:
             raw (bool, optional): if True, escape braces.
 
         """
-        logger.debug(f"Send: {text}")
         await self.character.msg(text, raw=raw)
 
-    async def send_messages(self):
-        """
-        Send all messages to the character.
-
-        This will also send the context prompt, if it's active.
-
-        """
-        if self not in type(self).condition.running:
-            return
-
-        logger.debug("Mark as done")
-        await type(self).condition.mark_as_done(self)
+    @asynccontextmanager
+    async def group_messages(self):
+        """Group messages, to use in an async with statement."""
+        await type(self).condition.mark_as_running(self)
+        try:
+            yield
+        finally:
+            await type(self).condition.mark_as_done(self)
 
     @classmethod
     def extrapolate(cls, path: Path):

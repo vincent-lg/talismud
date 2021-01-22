@@ -29,6 +29,8 @@
 
 """Name handler, to handle search in names."""
 
+from data.decorators import lazy_property
+from data.handlers.attributes import AttributeHandler
 from data.handlers.tags import TagHandler
 
 ## Constants
@@ -45,11 +47,38 @@ TO_REPLACE = {
         "\t": " ",
 }
 
+# Cached names, to speed up querying
+CACHED_NAMES = {}
+
 class NameHandler(TagHandler):
 
     """Name handler, using a tag handler behind the scenes."""
 
     subset = "name"
+
+    def __init__(self, owner):
+        super().__init__(owner)
+        self.common = CommonNames(owner)
+
+    @lazy_property
+    def singular(self):
+        """Return the singular name."""
+        return self._get_common_name("singular")
+
+    @singular.setter
+    def singular(self, name: str):
+        """Change the singular name."""
+        self._set_common_name("singular", name)
+
+    @lazy_property
+    def plural(self):
+        """Return the plural name."""
+        return self._get_common_name("plural")
+
+    @plural.setter
+    def plural(self, name: str):
+        """Change the plural name."""
+        self._set_common_name("plural", name)
 
     def register(self, name: str):
         """
@@ -176,3 +205,49 @@ class NameHandler(TagHandler):
         name = name.strip()
 
         return name
+
+    def _get_common_name(self, cat: str):
+        """Return the cached common name."""
+        key = f"{self.__object_class}:{self.__object_id}:{cat}"
+        if (value := CACHED_NAMES.get(key)) is not None:
+            return value
+
+        # If the owner has a prototype, query it.
+        prototype = getattr(self.__owner, "prototype", None)
+        if prototype:
+            key = f"{prototype.__class__.__name__}:{prototype.id}:{cat}"
+            if (value := CACHED_NAMES.get(key)) is not None:
+                return value
+
+        return ""
+
+    def _set_common_name(self, cat: str, name: str):
+        """Change the cached name."""
+        key = f"{self.__object_class}:{self.__object_id}:{cat}"
+        CACHED_NAMES[key] = name
+        setattr(self.common.db, cat, name)
+
+
+class CommonNames(AttributeHandler):
+
+    """
+    Common names, using attributes.
+
+    These names, stored as attributes, are cached when the game starts,
+    and updated in the cache on demand.  This process allows to query them
+    quickly.
+
+    """
+
+    subset = "names"
+
+    @classmethod
+    def cache_names(cls):
+        """Cache all names for all objects."""
+        names = cls._query_all()
+        for name in names:
+            to_cache = (
+                    f"{name.object_class}:{name.object_id}:"
+                    f"{name.name}"
+            )
+            CACHED_NAMES[to_cache] = name.value

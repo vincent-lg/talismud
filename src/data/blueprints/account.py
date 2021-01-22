@@ -68,10 +68,10 @@ class AccountDocument(Document):
             "presence": "optional",
             "py_attr": "email",
         },
-        "characters": {
+        "players": {
             "type": "subset",
-            "document_type": "character",
-            "py_attr": "characters",
+            "document_type": "player",
+            "py_attr": "players",
         },
     }
 
@@ -105,10 +105,10 @@ class AccountDocument(Document):
             account.email = email
         self.blueprint.objects[account] = self
 
-        # Add the characters
-        for character in list(self.cleaned.characters):
+        # Add the players
+        for player in list(self.cleaned.players):
             try:
-                character.apply()
+                player.apply()
             except DelayMe:
-                self.cleaned.characters.remove(character)
-                raise DelayDocument(character)
+                self.cleaned.players.remove(player)
+                raise DelayDocument(player)

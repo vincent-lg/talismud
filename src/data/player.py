@@ -27,14 +27,39 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Data package, to host database entities and data handlers."""
+"""Player entity.
 
-from data.account import Account
-from data.blueprints.record import BlueprintRecord
+A player is a character with a name, and it can be linked to an account.
+
+"""
+
+from datetime import datetime
+import pickle
+from pony.orm import Optional, Required
+
+from context.stack import ContextStack
 from data.character import Character
-from data.delay import Delay
-from data.exit import Exit
-from data.player import Player
-from data.room import Room
-from data.session import Session
-from web.session import WebSession
+from data.decorators import lazy_property
+
+class Player(Character):
+
+    """Playing Character (PC)."""
+
+    name = Required(str)
+    account = Required("Account")
+    created_on = Required(datetime, default=datetime.utcnow)
+    binary_context_stack = Optional(bytes)
+
+    @lazy_property
+    def context_stack(self):
+        """Return the stored or newly-build context stack."""
+        stored = self.binary_context_stack
+        if stored:
+            return pickle.loads(stored)
+
+        # Create a new context stack
+        stack = ContextStack(self)
+
+        # Add the static command layer as first layer
+        stack.add_command_layer("static")
+        return stack

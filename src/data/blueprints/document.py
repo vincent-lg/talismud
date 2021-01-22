@@ -51,7 +51,7 @@ from data.base import db
 NOT_SET = object()
 DOCUMENT_TYPES = {
         "account": "data.blueprints.account.AccountDocument",
-        "character": "data.blueprints.character.CharacterDocument",
+        "player": "data.blueprints.player.PlayerDocument",
         "exit": "data.blueprints.exit.ExitDocument",
         "room": "data.blueprints.room.RoomDocument",
 }

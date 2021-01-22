@@ -29,14 +29,10 @@
 
 """Character entity, a playing character or non-playing character alike."""
 
-import inspect
-from datetime import datetime
-import pickle
 import typing as ty
 
-from pony.orm import Optional, Required, Set
+from pony.orm import Optional
 
-from context.stack import ContextStack
 from data.base import db, PicklableEntity
 from data.decorators import lazy_property
 from data.handlers import (
@@ -49,11 +45,7 @@ class Character(PicklableEntity, db.Entity):
 
     """Character entity."""
 
-    name = Required(str, max_len=128)
     session = Optional("Session")
-    account = Optional("Account")
-    created_on = Required(datetime, default=datetime.utcnow)
-    binary_context_stack = Optional(bytes)
 
     @lazy_property
     def db(self):
@@ -100,20 +92,6 @@ class Character(PicklableEntity, db.Entity):
                 When a character logs in or is controlled by a player.
                 This scripting event is called after a player has connected to this character, either has part of standard login, or after an admin has taken control of this character.
         """)
-
-    @lazy_property
-    def context_stack(self):
-        """Return the stored or newly-build context stack."""
-        stored = self.binary_context_stack
-        if stored:
-            return pickle.loads(stored)
-
-        # Create a new context stack
-        stack = ContextStack(self)
-
-        # Add the static command layer as first layer
-        stack.add_command_layer("static")
-        return stack
 
     async def move_to(self, exit):
         """Move to the specified exit."""

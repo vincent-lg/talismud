@@ -207,6 +207,7 @@ class RoomDocument(Document):
         else:
             room.title = self.cleaned.title
 
+        self.object = room
         if add_tags:
             room.blueprints.add(self.blueprint.name)
 

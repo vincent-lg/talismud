@@ -62,7 +62,7 @@ class Account(PicklableEntity, db.Entity):
     updated_on = Required(datetime, default=datetime.utcnow)
     sessions = Set("Session")
     web_sessions = Set("WebSession")
-    characters = Set("Character")
+    players = Set("Player")
     binary_options = Required(bytes, default=pickle.dumps({}))
 
     @lazy_property

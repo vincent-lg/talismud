@@ -27,57 +27,54 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Blueprint document for characters."""
+"""Blueprint document for player-characters."""
 
 from data.base import db
 from data.blueprints.document import Document
 from data.blueprints.exceptions import DelayMe
 
-class CharacterDocument(Document):
+class PlayerDocument(Document):
 
-    """Character document to add exits in blueprints."""
+    """Player document to add players in blueprints."""
 
-    doc_type = "character"
+    doc_type = "player"
     doc_dump = False
     fields = {
         "name": {
             "type": "str",
-            "max_len": 128,
             "presence": "required",
             "py_attr": "name",
         },
         "account": {
             "type": "str",
-            "max_len": 64,
             "presence": "required",
             "py_attr": "account.username",
         },
         "permissions": {
             "type": "str",
-            "max_len": 64,
             "presence": "optional",
             "py_attr": "permissions.get",
         },
     }
 
     def apply(self):
-        """Apply the document, create or update a character."""
+        """Apply the document, create or update a player."""
         account = db.Account.get(username=self.cleaned.account)
         if account is None:
             raise DelayMe
 
-        # If the character already exists
-        character = db.Character.get(name=self.cleaned.name)
-        if character is None:
-            character = db.Character(name=self.cleaned.name)
+        # If the player already exists
+        player = db.Player.get(name=self.cleaned.name)
+        if player is None:
+            player = db.Player(name=self.cleaned.name, account=account)
 
-        # Add character to account, if necessary
-        if character not in account.characters:
-            account.characters.add(character)
+        # Add player to account, if necessary
+        if player not in account.players:
+            account.players.add(player)
 
-        # Add permissions to the character, if necessary
+        # Add permissions to the player, if necessary
         for permission in self.cleaned.permissions.split():
             if permission:
-                character.permissions.add(permission)
+                player.permissions.add(permission)
 
-        self.objects = (character, )
+        self.objects = (player, )

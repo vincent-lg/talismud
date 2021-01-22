@@ -123,13 +123,19 @@ class AttributeHandler:
         if result:
             if value:
                 return result[0].value
-        
+
             return result[0]
 
         if default is not NOT_SET:
             return default
 
         raise ValueError("uknown attribute")
+
+    @classmethod
+    def _query_all(cls):
+        """Query all attributes in this subset, reutning the query."""
+        return select(attribute for attribute in Attribute
+                if attribute.subset == cls.subset)
 
 
 class Attribute(db.Entity):
