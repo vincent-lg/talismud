@@ -43,13 +43,11 @@ class Home(SessionContext):
 
     """
 
+    prompt = "Your username:"
     text = """
         If you already have an account, enter its username.
         Otherwise, type 'new' to create a new account.
     """
-
-    def get_prompt(self):
-        return "* Your username:"
 
     async def input_new(self):
         """The user has input 'new' to create a new account."""
@@ -58,7 +56,7 @@ class Home(SessionContext):
     async def input(self, username: str):
         """The user entered something else."""
         username = username.lower()
-        account = Account.get(username=username)
+        account = Account.get(username=username.lower())
         if account is None:
             await self.msg(
                 f"The account {username!r} couldn't be found.  If you "

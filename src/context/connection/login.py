@@ -27,42 +27,43 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Ghost context to connect a session and a character.
+"""Ghost context to connect a session and a player.
 
 This context will attempt to connect the current session with an existing
-character, recorded in the session options, and redirect to
+player, recorded in the session options, and redirect to
 "connection.game" (the connected mode for all players, where
 they can enter commands).
 
 """
 
 from context.session_context import SessionContext
-from data.room import Room
+from data.base import db
 import settings
 
 class Login(SessionContext):
 
-    """Ghost context to connect a character to an active session."""
+    """Ghost context to connect a player to an active session."""
 
     async def refresh(self):
-        """Try to create a character."""
-        character = self.session.options.get("character")
+        """Try to connect a character."""
+        player = self.session.options.get("player")
 
         # Check that all data are filled
-        if character is None:
+        if player is None:
             await self.msg(
-                "Hmmm... something went wrong.  What was your character name again?"
+                "Hmmm... something went wrong.  What was your "
+                "character name again?"
             )
-            await self.move("character.name")
+            await self.move("player.name")
             return
 
-        character.session = self.session
-        location = character.db.get("saved_location", None)
+        player.session = self.session
+        location = player.db.get("saved_location", None)
         if location is None:
-            location = Room.get(barcode=settings.RETURN_ROOM)
+            location = db.Room.get(barcode=settings.RETURN_ROOM)
 
-        if character.location is None:
-            character.db.saved_location = location
-            character.location = location
+        if player.location is None:
+            player.db.saved_location = location
+            player.location = location
 
         await self.move("connection.game")

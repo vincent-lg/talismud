@@ -132,6 +132,7 @@ class BaseContext(metaclass=ABCMeta):
     """
 
     pyname = "UNSET"
+    prompt = ""
     text = ""
 
     def __str__(self):
@@ -189,7 +190,7 @@ class BaseContext(metaclass=ABCMeta):
 
     def get_prompt(self):
         """Return the prompt to be displayed for this context."""
-        return ""
+        return self.prompt
 
     async def input(self, command: str):
         """

@@ -35,17 +35,16 @@ class Password(SessionContext):
 
     """Context to enter the account's password."""
 
+    prompt = "Your password:"
     text = """
         Enter your accoun't password.
-
-        Your password:
     """
 
     async def greet(self) -> str:
         """Greet the user."""
         account = self.session.options["account"]
         if account.options.get("wrong_password"):
-            return "Please wait, you can't retry your password just now."
+            return "Please wait, you can't retry your password just yet."
         else:
             return await super().greet()
 
@@ -56,21 +55,26 @@ class Password(SessionContext):
             await self.msg("A problem occurred, please try logging in again.")
             await self.move("account.home")
             return
-        elif account.options.get("wrong_password"):
-            await self.msg("Please wait, you can't retry your password just now.")
+
+        if account.options.get("wrong_password"):
+            await self.msg(
+                    "Please wait, you can't retry your password just yet."
+            )
             return
 
         if account.is_correct_password(password):
             await self.msg("Correct password!")
-            account.options.pop("wrong_password", None)
+            _ = account.options.pop("wrong_password", None)
             self.session.account = account
-            await self.move("connection.characters")
+            await self.move("connection.players")
         else:
             account.options["wrong_password"] = True
-            await self.msg("Incorrect password.  Please try again in 3 seconds.")
+            await self.msg(
+                    "Incorrect password.  Please try again in 3 seconds."
+            )
             self.call_in(3, self.allow_new_password, account)
 
     async def allow_new_password(self, account):
         """Allow to enter a new password."""
-        account.options.pop("wrong_password", None)
+        _ = account.options.pop("wrong_password", None)
         await self.refresh()

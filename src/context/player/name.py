@@ -27,53 +27,39 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Display the list of characters for this account."""
-
-from textwrap import dedent
+"""Name context, to create a new player's name."""
 
 from context.session_context import SessionContext
-from data import Character
 import settings
 
-class Characters(SessionContext):
+class Name(SessionContext):
 
-    """Context do display the account's characters."""
+    """
+    Context to enter the player's new name.
 
-    async def greet(self):
-        """Display the chaqracter's screen."""
-        account = self.session.account
-        screen = dedent(f"""
-            Welcome to your account, {account.username}!
+    Input:
+        <valid>: valid name, move to player.complete.
+        <invalid>: invalid name, gives reason and stays here.
 
-            You can select your characters here.  Enter a number to
-            play one of these characters or the letter 'c' to create a new one.
+    """
 
-            Available characters:
-        """.strip("\n"))
+    text = f"""
+        You are now about to create a new character in {settings.GAME_NAME}.
+        Enter the name of your character as others will see it in the game.
 
-        for i, character in enumerate(
-                account.characters.sort_by(Character.created_on)):
-            screen += f"\n  {i + 1} to play {character.name}"
+        Your new character's name:
+    """
 
-        screen += "\n\n" + dedent("""
-            Type 'c' to create a new character.
-        """.strip("\n"))
+    async def input(self, name):
+        """The user entered something."""
+        # Check that the name isn't a forbidden name
+        if name.lower() in settings.FORBIDDEN_CHARACTER_NAMES:
+            await self.msg(
+                f"The name {name!r} is forbidden.  Please "
+                "choose another one."
+            )
+            return
 
-        return screen
-
-    async def input_c(self):
-        """The player has entered 'c'."""
-        await self.move("character.name")
-
-    async def input(self, command: str):
-        """Expecting a character number."""
-        account = self.session.account
-        command = command.lower().strip()
-        for i, character in enumerate(
-                account.characters.sort_by(Character.created_on)):
-            if str(i + 1) == command:
-                self.session.options["character"] = character
-                await self.move("connection.login")
-                return
-
-        await self.msg("Invalid command.")
+        await self.msg(f"You selected the name: {name!r}.")
+        self.session.options["player_name"] = name
+        await self.move("player.complete")

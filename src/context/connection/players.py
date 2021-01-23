@@ -27,49 +27,53 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Ghost context to complete a new character.
+"""Display the list of players for this account."""
 
-This context will attempt to create a character and will then move to
-another.  The user has no chance to input.  It's more a "responsible"
-context than an active context.
-
-"""
-
-from pony.orm import commit, OrmError
+from textwrap import dedent
 
 from context.session_context import SessionContext
-from data.character import Character
-from data.room import Room
+from data.base import db
 import settings
 
-class Complete(SessionContext):
+class Players(SessionContext):
 
-    """Ghost context to create a character."""
+    """Context to display the account's players."""
 
-    async def refresh(self):
-        """Try to create a character."""
-        name = self.session.options.get("character_name")
+    async def greet(self):
+        """Display the players' screen."""
+        account = self.session.account
+        screen = dedent(f"""
+            Welcome to your account, {account.username}!
 
-        # Check that all data are filled
-        if name is None:
-            await self.msg(
-                "Hmmm... something went wrong.  What was your character name again?"
-            )
-            await self.move("character.name")
-            return
+            You can select your players here.  Enter a number to
+            play one of these characters or the letter 'c' to create a new one.
 
-        # Attempt to create the character
-        try:
-            character = Character(name=name)
-            commit()
-        except OrmError:
-            await self.msg("Some error occurred.  We'll have to try again.")
-            await self.move("character.name")
-            return
+            Available characters:
+        """.strip("\n"))
 
-        character.account = self.session.account
-        self.session.options["character"] = character
-        character.db.saved_location = Room.get(
-                barcode=settings.START_ROOM)
-        await self.msg(f"The character named {name} was created successfully.")
-        await self.move("connection.login")
+        for i, player in enumerate(
+                account.players.sort_by(db.Player.created_on)):
+            screen += f"\n  {i + 1} to play {player.name}"
+
+        screen += "\n\n" + dedent("""
+            Type 'c' to create a new player.
+        """.strip("\n"))
+
+        return screen
+
+    async def input_c(self):
+        """The user has entered 'c'."""
+        await self.move("player.name")
+
+    async def input(self, command: str):
+        """Expecting a player number."""
+        account = self.session.account
+        command = command.lower().strip()
+        for i, player in enumerate(
+                account.players.sort_by(db.Player.created_on)):
+            if str(i + 1) == command:
+                self.session.options["player"] = player
+                await self.move("connection.login")
+                return
+
+        await self.msg("Invalid command.")

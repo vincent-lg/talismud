@@ -27,39 +27,47 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Name context, to create a new character's name."""
+"""Ghost context to complete a new player.
+
+This context will attempt to create a player and will then move to
+another.  The user has no chance to input.  It's more a "responsible"
+context than an active context.
+
+"""
+
+from pony.orm import commit, OrmError
 
 from context.session_context import SessionContext
+from data.base import db
 import settings
 
-class Name(SessionContext):
+class Complete(SessionContext):
 
-    """
-    Context to enter the character's new name.
+    """Ghost context to create a player."""
 
-    Input:
-        <valid>: valid name, move to character.complete.
-        <invalid>: invalid name, gives reason and stays here.
+    async def refresh(self):
+        """Try to create a character."""
+        name = self.session.options.get("player_name")
 
-    """
-
-    text = f"""
-        You are now about to create a new character in {settings.GAME_NAME}.
-        Enter the name of your character as others will see it in the game.
-
-        Your new character's name:
-    """
-
-    async def input(self, name):
-        """The user entered something."""
-        # Check that the name isn't a forbidden name
-        if name.lower() in settings.FORBIDDEN_CHARACTER_NAMES:
+        # Check that all data are filled
+        if name is None:
             await self.msg(
-                f"The name {name!r} is forbidden.  Please "
-                "choose another one."
+                "Hmmm... something went wrong.  What was your character name again?"
             )
+            await self.move("player.name")
             return
 
-        await self.msg(f"You selected the name: {name!r}.")
-        self.session.options["character_name"] = name
-        await self.move("character.complete")
+        # Attempt to create the player
+        try:
+            player = db.Player(name=name, account=self.session.account)
+            commit()
+        except OrmError:
+            await self.msg("Some error occurred.  We'll have to try again.")
+            await self.move("player.name")
+            return
+
+        self.session.options["player"] = player
+        player.db.saved_location = db.Room.get(
+                barcode=settings.START_ROOM)
+        await self.msg(f"The character named {name} was created successfully.")
+        await self.move("connection.login")
