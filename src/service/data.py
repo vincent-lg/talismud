@@ -36,6 +36,7 @@ from logbook import FileHandler, Logger
 from pony.orm import commit, core, db_session, set_sql_debug
 
 from data.base import db
+from data.handlers.name import CommonNames
 from data.search import search_permission
 from service.base import BaseService
 import settings
@@ -127,6 +128,7 @@ class Service(BaseService):
             commit()
         db.Delay.restore()
         db.BlueprintRecord.apply_all()
+        CommonNames.cache_names()
 
     def create_session(self, session_id):
         """Create a new, empty session in the database, return it."""

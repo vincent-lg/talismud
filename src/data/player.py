@@ -63,3 +63,12 @@ class Player(Character):
         # Add the static command layer as first layer
         stack.add_command_layer("static")
         return stack
+
+    def after_insert(self):
+        """
+        Hook called before the player is inserted.
+
+        We take this opportunity to add the player name as a singular name.
+
+        """
+        self.names.singular = self.name

@@ -208,12 +208,14 @@ class NameHandler(TagHandler):
 
     def _get_common_name(self, cat: str):
         """Return the cached common name."""
-        key = f"{self.__object_class}:{self.__object_id}:{cat}"
+        object_class = self._TagHandler__object_class
+        object_id = self._TagHandler__object_id
+        key = f"{object_class}:{object_id}:{cat}"
         if (value := CACHED_NAMES.get(key)) is not None:
             return value
 
         # If the owner has a prototype, query it.
-        prototype = getattr(self.__owner, "prototype", None)
+        prototype = getattr(self._TagHandler__owner, "prototype", None)
         if prototype:
             key = f"{prototype.__class__.__name__}:{prototype.id}:{cat}"
             if (value := CACHED_NAMES.get(key)) is not None:
@@ -223,9 +225,11 @@ class NameHandler(TagHandler):
 
     def _set_common_name(self, cat: str, name: str):
         """Change the cached name."""
-        key = f"{self.__object_class}:{self.__object_id}:{cat}"
+        object_class = self._TagHandler__object_class
+        object_id = self._TagHandler__object_id
+        key = f"{object_class}:{object_id}:{cat}"
         CACHED_NAMES[key] = name
-        setattr(self.common.db, cat, name)
+        setattr(self.common, cat, name)
 
 
 class CommonNames(AttributeHandler):
