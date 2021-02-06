@@ -36,6 +36,12 @@ from pony.orm import (
 )
 
 from data.base import db
+from data.cache import CACHED
+
+LOCATIONS = {}
+CONTENTS = {}
+CACHED["contents"] = CONTENTS
+CACHED["locations"] = LOCATIONS
 
 class LocatorHandler:
 
@@ -44,20 +50,25 @@ class LocatorHandler:
     max_index = None
 
     def __init__(self, owner):
-        self.__owner = owner
-        self.__object_class = owner.__class__.__name__
+        self._owner = owner
+        self._object_class = owner.__class__.__name__
         if owner.id is None:
             commit()
-        self.__object_id = owner.id
+        self._object_id = owner.id
         self.index = None
 
     def get(self):
         """Retrieve the location of the owner."""
-        locator = Location.get(object_class=self.__object_class,
-                object_id=self.__object_id)
+        if (cached := LOCATIONS.get(self._owner)):
+            return cached
+
+        locator = Location.get(object_class=self._object_class,
+                object_id=self._object_id)
         if locator:
             Entity = getattr(db, locator.location_class)
             location = Entity[locator.location_id]
+            if location:
+                LOCATIONS[self._owner] = location
             return location
 
         return None
@@ -89,8 +100,8 @@ class LocatorHandler:
         if location is not None:
             object_class, object_id = type(location).__name__, location.id
             while object_class:
-                if (object_class == self.__object_class and
-                        object_id == self.__object_id):
+                if (object_class == self._object_class and
+                        object_id == self._object_id):
                     raise RecursionError
 
                 t_location = Location.get(object_class=object_class,
@@ -101,8 +112,9 @@ class LocatorHandler:
                 else:
                     break
 
-        locator = Location.get(object_class=self.__object_class,
-                object_id=self.__object_id)
+        old_location = self.get()
+        locator = Location.get(object_class=self._object_class,
+                object_id=self._object_id)
         if locator:
             if location is None:
                 locator.delete()
@@ -112,18 +124,35 @@ class LocatorHandler:
             locator.location_id = location.id
             locator.index = type(self).max_index + 1
         elif location is not None:
-            Location(object_class=self.__object_class,
-                    object_id=self.__object_id,
+            Location(object_class=self._object_class,
+                    object_id=self._object_id,
                     location_class=type(location).__name__,
                     location_id=location.id, index=type(self).max_index + 1)
 
         type(self).max_index += 1
 
+        # Affect the cached location and contents
+        LOCATIONS[self._owner] = location
+        if old_location:
+            old_contents = CONTENTS.get(old_location, [])
+            if self._owner in old_contents:
+                old_contents.remove(self._owner)
+        if location:
+            new_contents = CONTENTS.get(location, [])
+            if not new_contents:
+                CONTENTS[location] = new_contents
+            new_contents.append(self._owner)
+
     def contents(self):
         """Return the contents of the owner, sorted by index."""
+        location = self.get()
+        cached = CONTENTS.get(location, None)
+        if cached is not None:
+            return cached
+
         contents = select(location for location in Location
-                if location.location_class == self.__object_class and
-                location.location_id == self.__object_id)
+                if location.location_class == self._object_class and
+                location.location_id == self._object_id)
         object_classes = defaultdict(list)
         indice = 0
         indices = {}

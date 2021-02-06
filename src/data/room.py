@@ -31,10 +31,11 @@
 
 import asyncio
 
-from pony.orm import Optional, Required, Set
+from pony.orm import Optional, PrimaryKey, Required, Set
 
 from data.base import db, PicklableEntity
 from data.decorators import lazy_property
+from data.group import group_names
 from data.exit import ExitHandler
 from data.handlers import (
         AttributeHandler, BlueprintHandler, DescriptionHandler,
@@ -51,6 +52,8 @@ class Room(PicklableEntity, db.Entity):
     barcode = Required(str, max_len=32, unique=True, index=True)
     exits_from = Set("Exit", reverse="origin")
     exits_to = Set("Exit", reverse="to")
+    repop = Set("RoomRepop", reverse="room")
+    has_spawned = Set("NPC", reverse="origin")
 
     @lazy_property
     def db(self):
@@ -85,11 +88,28 @@ class Room(PicklableEntity, db.Entity):
     def contents(self):
         return self.locator.contents()
 
+    @property
+    def characters(self):
+        """Return a list of characters in this room."""
+        return [content for content in self.contents
+                if isinstance(content, db.Character)]
+
     # Database hooks
     def after_update(self):
         """Save in the room blueprints, if any."""
         loop = asyncio.get_event_loop()
         loop.call_soon(self.blueprints.save)
+
+    def force_repop(self):
+        """Force the current room to repop."""
+        for line in self.repop:
+            # Get all NPCs of that prototype whose origin is self.
+            already = db.NPC.select(lambda NPC: NPC.origin == self
+                    and NPC.prototype == line.prototype).count()
+            to_pop = line.number - already
+            if to_pop > 0:
+                for _ in range(to_pop):
+                    line.prototype.create_at(self)
 
     def look(self, character: 'db.Character'):
         """
@@ -114,4 +134,24 @@ class Room(PicklableEntity, db.Entity):
             exits,
         ]
 
+        # Add the present characters
+        characters = self.characters
+        characters = [char for char in characters if char is not character]
+        if characters:
+            names = group_names(characters, character)
+            names = [f"- {name}" for name in names]
+            lines.append("")
+            lines.extend(names)
+
+        # Return the full room description.
         return "\n".join(lines)
+
+
+class RoomRepop(PicklableEntity, db.Entity):
+
+    """A line of repop, linking a room, character prototypes and number."""
+
+    room = Required("Room", reverse="repop")
+    prototype = Required("CharacterPrototype", reverse="repop")
+    PrimaryKey(room, prototype)
+    number = Required(int)

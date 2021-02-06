@@ -34,9 +34,7 @@ from data.blueprints.record import BlueprintRecord
 from data.character import Character
 from data.delay import Delay
 from data.exit import Exit
-from data.npc import NPC
 from data.player import Player
-from data.prototypes.character import CharacterPrototype
-from data.room import Room, RoomRepop
+from data.room import Room
 from data.session import Session
 from web.session import WebSession

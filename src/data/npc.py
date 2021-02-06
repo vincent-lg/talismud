@@ -27,73 +27,20 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Player entity.
+"""Non-playing character entity."""
 
-A player is a character with a name, and it can be linked to an account.
-
-"""
-
-from datetime import datetime
-import pickle
-from pony.orm import Optional, Required
 from typing import Sequence
 
-from context.stack import ContextStack
+from pony.orm import Optional
+
 from data.character import Character
-from data.decorators import lazy_property
 
-class Player(Character):
+class NPC(Character):
 
-    """Playing Character (PC)."""
+    """Non-playing character."""
 
-    name = Required(str)
-    account = Required("Account")
-    created_on = Required(datetime, default=datetime.utcnow)
-    binary_context_stack = Optional(bytes)
-
-    @lazy_property
-    def context_stack(self):
-        """Return the stored or newly-build context stack."""
-        stored = self.binary_context_stack
-        if stored:
-            return pickle.loads(stored)
-
-        # Create a new context stack
-        stack = ContextStack(self)
-
-        # Add the static command layer as first layer
-        stack.add_command_layer("static")
-        return stack
-
-    def after_insert(self):
-        """
-        Hook called before the player is inserted.
-
-        We take this opportunity to add the player name as a singular name.
-
-        """
-        self.names.singular = self.name
-
-    def get_hashable_name(self, group_for: 'db.Character'):
-        """
-        Return a hashable name to indicate future grouping.
-
-        By default, this method returns the singular name
-        for this object (that is, the `get_name_for`  method with
-        only one object, `self`).  However, this can be altered,
-        to change the way object names are grouped.
-        In this case, we return the player ID, because that is unique
-        (and we don't want to group player names).
-
-        Args:
-            group_for (Character): the character to whom the list of objects
-                    will be displayed.
-
-        Returns:
-            name (str): the hashable name.
-
-        """
-        return self.id
+    prototype = Optional("CharacterPrototype")
+    origin = Optional("Room", reverse="has_spawned")
 
     def get_name_for(self, group_for: 'db.Character',
             group: Sequence['CanBeNamed']):
@@ -114,4 +61,7 @@ class Player(Character):
             name (str): the singular or plural name to display, depending.
 
         """
-        return self.name
+        if len(group) == 1:
+            return self.names.singular
+        else:
+            return f"{len(group)} {self.names.plural}"

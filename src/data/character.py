@@ -33,7 +33,7 @@ import typing as ty
 
 from pony.orm import Optional
 
-from data.base import db, PicklableEntity
+from data.base import db, CanBeNamed, PicklableEntity
 from data.decorators import lazy_property
 from data.handlers import (
         AttributeHandler, BlueprintHandler, LocatorHandler,
@@ -41,7 +41,7 @@ from data.handlers import (
 from scripting.variable import VariableFormatter
 import settings
 
-class Character(PicklableEntity, db.Entity):
+class Character(CanBeNamed, PicklableEntity, db.Entity):
 
     """Character entity."""
 

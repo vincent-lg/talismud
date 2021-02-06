@@ -29,6 +29,9 @@
 
 """Name handler, to handle search in names."""
 
+from pony.orm import select
+
+from data.base import db
 from data.decorators import lazy_property
 from data.handlers.attributes import AttributeHandler
 from data.handlers.tags import TagHandler
@@ -101,12 +104,14 @@ class NameHandler(TagHandler):
             super().add(portion)
 
     @classmethod
-    def search(cls, string: str):
+    def search(cls, string: str, limit_to=None):
         """
         Search the given string, returning a list of mathcing objects.
 
         Args:
             string (str): the string to match.
+            limit_to (list of objects, opt): list of objects that
+                    should include the limit.
 
         This can be a piece of the name.  However, by default,
         the specified string should be at the beginning
@@ -123,8 +128,18 @@ class NameHandler(TagHandler):
         string = cls.normalize(string)
 
         query = cls._get_search_query()
-        query = query.filter(lambda tag: tag.name.startswith(string))
+        if limit_to is not None:
+            ids = tuple(f"{type(obj).__name__}:{obj.id}" for obj in limit_to)
+            query = db.TagLink.select(lambda link: link.str_id in ids)
+            query = query.filter(lambda link: link.tag.name.startswith(
+                    string))
+            query = select(link.tag for link in query)
+        else:
+            query = query.filter(lambda tag: tag.name.startswith(string))
         objects = cls._get_opbjects_from_query(query)
+        if limit_to is not None:
+            objects = [obj for obj in objects if obj in limit_to]
+
         return objects
 
     @classmethod

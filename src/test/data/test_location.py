@@ -9,7 +9,7 @@ class TestLocation(BaseTest):
 
     def test_moving_character(self):
         """Move a character inside and outside of a room."""
-        character = db.Character(name="test")
+        character = self.create_character()
         room1 = db.Room(title="here", barcode="1")
         self.assertIsNone(character.location)
         self.assertEqual(room1.contents, [])
@@ -43,8 +43,8 @@ class TestLocation(BaseTest):
         for i in range(5):
             rooms.append(db.Room(title=f"here_{i}", barcode=str(i)))
 
-        for i in range(20):
-            characters.append(db.Character(name=f"character_{i}"))
+        for _ in range(20):
+            characters.append(self.create_character())
 
         # Move characters in rooms
         for character, room in zip(characters, cycle(rooms)):
@@ -57,8 +57,8 @@ class TestLocation(BaseTest):
 
     def test_recursion(self):
         """Test the recursion exception when moving inconsistently."""
-        character1 = db.Character(name="test")
-        character2 = db.Character(name="test2")
+        character1 = self.create_character()
+        character2 = self.create_character()
         character2.location = character1
 
         # Moving character1 into character1 should definitely not work

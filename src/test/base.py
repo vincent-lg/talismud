@@ -11,6 +11,7 @@ import unittest
 from pony.orm import db_session
 
 from data.base import db
+from data.cache import CACHED
 from data.decorators.lazy_property import LazyPropertyDescriptor
 
 # Bind to a temporary database
@@ -39,13 +40,18 @@ class BaseTest(unittest.TestCase):
                 value = getattr(entity, key)
                 if isinstance(value, LazyPropertyDescriptor):
                     value.memory.clear()
+
+        # Clean up the cached objects
+        for cached in CACHED.values():
+            cached.clear()
+
+        # End the database session
         db_session.__exit__()
         db.drop_all_tables(with_all_data=True)
 
-    def create_character(self, name=None):
+    def create_character(self):
         """Create a character."""
-        name = name or f"character_{next(ID_CHAR)}"
-        return db.Character(name=name)
+        return db.Character()
 
     def create_instance(self, cls):
         """Create and return an instance of the specified class."""

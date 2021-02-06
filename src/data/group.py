@@ -27,16 +27,38 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Data package, to host database entities and data handlers."""
+"""Module to group objects by their name."""
 
-from data.account import Account
-from data.blueprints.record import BlueprintRecord
-from data.character import Character
-from data.delay import Delay
-from data.exit import Exit
-from data.npc import NPC
-from data.player import Player
-from data.prototypes.character import CharacterPrototype
-from data.room import Room, RoomRepop
-from data.session import Session
-from web.session import WebSession
+from collections import defaultdict
+from typing import Sequence
+
+from data.base import db, CanBeNamed
+
+def group_names(objects: Sequence[CanBeNamed], group_for: 'db.Character'):
+    """
+    Return the object names, grouped by quantity.
+
+    Args:
+        objects (sequence): the list of objects.
+        group_for (Character): the character looking on these objects.
+
+    Note:
+        All objects should implement `get_name_for` and
+        `get_hashable_name`, thus, it is recommanded to inhave these
+        objects inherit from `CanBeNamed`.
+
+    """
+    to_hash = defaultdict(list)
+    for obj in objects:
+        hashed = obj.get_hashable_name(group_for)
+        to_hash[hashed].append(obj)
+
+    # Now the names and objects should be sorted.
+    names = []
+    for grouped in to_hash.values():
+        # We know there is at least one object in the list, we ask it to
+        # handle the pluralization process.
+        name = objects[0].get_name_for(group_for, grouped)
+        names.append(name)
+
+    return names

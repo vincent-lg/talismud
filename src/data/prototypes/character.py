@@ -27,16 +27,64 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Data package, to host database entities and data handlers."""
+"""CharacterPrototype entity, a NPC prototype."""
 
-from data.account import Account
-from data.blueprints.record import BlueprintRecord
-from data.character import Character
-from data.delay import Delay
-from data.exit import Exit
-from data.npc import NPC
-from data.player import Player
-from data.prototypes.character import CharacterPrototype
-from data.room import Room, RoomRepop
-from data.session import Session
-from web.session import WebSession
+import typing as ty
+
+from pony.orm import Required, Set
+
+from data.base import db, PicklableEntity
+from data.decorators import lazy_property
+from data.handlers import (
+        AttributeHandler, BlueprintHandler, DescriptionHandler,
+        NameHandler, TagHandler
+)
+
+class CharacterPrototype(PicklableEntity, db.Entity):
+
+    """Character prototype entity, to define non-playing characters."""
+
+    barcode = Required(str, unique=True, index=True)
+    characters = Set("NPC", reverse="prototype")
+    repop = Set("RoomRepop", reverse="prototype")
+
+    @lazy_property
+    def db(self):
+        return AttributeHandler(self)
+
+    @lazy_property
+    def tags(self):
+        return TagHandler(self)
+
+    @lazy_property
+    def blueprints(self):
+        return BlueprintHandler(self)
+
+    @lazy_property
+    def names(self):
+        return NameHandler(self)
+
+    @lazy_property
+    def description(self):
+        return DescriptionHandler(self)
+
+    def create_at(self, location: 'db.Room'):
+        """
+        Create a character at this location.
+
+        Args:
+            location (Room): the character's intended location.
+
+        Returns:
+            character (Character): the new character.
+
+        """
+        character = self.characters.create()
+        character.location = location
+        character.origin = location
+
+        # Subscribe to names
+        character.names.register(self.names.singular)
+        character.names.register(self.names.plural)
+
+        return character

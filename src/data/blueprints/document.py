@@ -51,9 +51,14 @@ from data.base import db
 NOT_SET = object()
 DOCUMENT_TYPES = {
         "account": "data.blueprints.account.AccountDocument",
+        "char_proto": ("data.blueprints.models.prototypes."
+                "character.CharacterPrototypeDocument"),
         "player": "data.blueprints.player.PlayerDocument",
         "exit": "data.blueprints.exit.ExitDocument",
         "room": "data.blueprints.room.RoomDocument",
+
+        # Private
+        "_room_repop": "data.blueprints.room.RoomRepop",
 }
 
 class Document:
@@ -148,7 +153,7 @@ class Document:
             if method is None:
                 raise ValueError(f"no {method_name} method")
 
-            ok = method(value, document, **definition)
+            ok = method(key, value, document, **definition)
             if ok is not NOT_SET:
                 setattr(self.cleaned, key, ok)
             else:
@@ -195,24 +200,25 @@ class Document:
 
             setattr(self.cleaned, key, value)
 
-    def is_proper_str(self, value, document, max_len=None,
+    def is_proper_str(self, name, value, document, max_len=None,
             presence="required", **kwargs):
         """Parse a simple string."""
         if presence == "required":
             if value is NOT_SET:
-                raise ValueError("this field is required")
+                raise ValueError(f"the field {name} of {self.doc_type} "
+                        "is required")
             return value
         elif presence == "optional":
             return value
 
         raise ValueError(f"presence {presence} not known")
 
-    def is_proper_str_or_bytes(self, value, document, max_len=None,
+    def is_proper_str_or_bytes(self, name, value, document, max_len=None,
             presence="required", **kwargs):
         """Parse a string or byte-string."""
         if presence == "required":
             if value is NOT_SET:
-                raise ValueError("this field is required")
+                raise ValueError(f"the field {name} is required")
             return value
         elif presence == "optional":
             return value
@@ -231,12 +237,12 @@ class Document:
     def default_subset(self):
         return []
 
-    def is_proper_int(self, value, document, presence="required",
+    def is_proper_int(self, name, value, document, presence="required",
             **kwargs):
         """Parse an integer."""
         if presence == "required":
             if value is NOT_SET:
-                raise ValueError("this field is required")
+                raise ValueError(f"the field {name} is required")
 
         if value is not NOT_SET:
             try:
@@ -251,7 +257,7 @@ class Document:
 
         raise ValueError(f"presence {presence} not known")
 
-    def is_proper_subset(self, value, document, document_type, number="any",
+    def is_proper_subset(self, key, value, document, document_type, number="any",
             **kwargs):
         """Is it a proper subset?"""
         if document_type not in DOCUMENT_TYPES:

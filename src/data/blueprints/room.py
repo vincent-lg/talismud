@@ -74,6 +74,10 @@ class RoomDocument(Document):
             "type": "subset",
             "document_type": "exit",
         },
+        "repop": {
+            "type": "subset",
+            "document_type": "_room_repop",
+        },
     }
 
     def fill_from_object(self, room):
@@ -98,6 +102,15 @@ class RoomDocument(Document):
                 definition["barcode"] = barcode
 
             self.cleaned.exits.append(definition)
+
+        self.cleaned.repop = []
+
+        for line in room.repop:
+            definition = {}
+            definition["room"] = room.barcode
+            definition["prototype"] = line.prototype.barcode
+            definition["number"] = line.number
+            self.cleaned.repop.append(definition)
 
     def add_neighbor(self, barcode: str, title: str, x: Optional[int] = None,
             y: Optional[int] = None, z: Optional[int] = None,
@@ -227,3 +240,52 @@ class RoomDocument(Document):
             except DelayMe:
                 self.cleaned.exits.remove(exit)
                 raise DelayDocument(exit)
+
+        # Add the repop, if possible.
+        for line in list(self.cleaned.repop):
+            try:
+                line.apply()
+            except DelayMe:
+                raise DelayDocument(line)
+
+        #if self.cleaned.repop:
+        #    room.force_repop()
+
+
+class RoomRepop(Document):
+
+    """Private document to link a character prototype with a room."""
+
+    doc_type = "_room_repop"
+    doc_dump = False
+    fields = {
+        "prototype": {
+            "type": "str",
+            "presence": "required",
+        },
+        "room": {
+            "type": "str",
+            "presence": "optional",
+        },
+        "number": {
+            "type": "int",
+            "presence": "required",
+        },
+    }
+
+    def apply(self):
+        """Apply the document, create an exit."""
+        prototype = db.CharacterPrototype.get(barcode=self.cleaned.prototype)
+        room = db.Room.get(barcode=self.cleaned.room)
+        number = self.cleaned.number
+        if prototype is None or room is None:
+            raise DelayMe
+
+        # If the exit already exists
+        repop = db.RoomRepop.get(room=room, prototype=prototype)
+        if repop:
+            repop.number = number
+        else:
+            repop = db.RoomRepop(room=room, prototype=prototype, number=number)
+
+        self.objects = (repop, )
