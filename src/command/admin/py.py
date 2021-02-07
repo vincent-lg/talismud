@@ -1,5 +1,6 @@
 import traceback
 from command import Command, CommandArgs
+from data.base import db
 
 class Py(Command):
 
@@ -25,6 +26,7 @@ class Py(Command):
         # Create the global variables
         vars = {
                 "self": self.character,
+                "db": db,
         }
 
         # First try to evaluate it
