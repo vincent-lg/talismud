@@ -117,6 +117,9 @@ class PythonConsole(CharacterContext):
 
         # Try to execute the line
         self.completed = True
+        self.console.locals.update({
+                "db": db,
+        })
         more = self.console.push(line)
         sys.stdout = stdout
         sys.stderr = stderr
