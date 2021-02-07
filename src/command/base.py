@@ -219,9 +219,9 @@ class Command:
         """Simply return an empty command argument parser."""
         return CommandArgs()
 
-    def parse(self):
+    def parse(self, character: 'db.Character'):
         """Parse the command, returning the namespace or an error."""
-        return type(self).args.parse(self.arguments)
+        return type(self).args.parse(character, self.arguments)
 
     async def run(self, args):
         """
@@ -265,7 +265,7 @@ class Command:
         """
         async with self.group_messages():
             try:
-                result = self.parse()
+                result = self.parse(self.character)
                 if isinstance(result, ArgumentError):
                     await self.msg(str(result))
                     return

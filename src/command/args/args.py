@@ -115,7 +115,8 @@ class CommandArgs:
         self.arguments.append(argument)
         return argument
 
-    def parse(self, arguments: str) -> Union[Namespace, ArgumentError]:
+    def parse(self, character: 'db.Character',
+            arguments: str) -> Union[Namespace, ArgumentError]:
         """
         Try to parse the command arguments.
 
@@ -123,6 +124,7 @@ class CommandArgs:
         parsed arguments, or an error represented by `ArgumentError`.
 
         Args:
+            character (Character): the character running the command.
             arguments (str): the unparsed arguments as a string.
 
         Returns:
@@ -178,7 +180,7 @@ class CommandArgs:
                     return ArgumentError(arg.msg_mandatory.format(
                             argument=arg.name))
 
-                result = arg.parse(arguments, begin, end)
+                result = arg.parse(character, arguments, begin, end)
                 if (isinstance(result, ArgumentError) and
                         arg.default is not _NOT_SET):
                     result = DefaultResult(arg.default)

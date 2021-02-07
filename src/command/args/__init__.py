@@ -36,4 +36,5 @@ from command.args.options import Options
 from command.args.namespace import Namespace
 from command.args.number import Number
 from command.args.text import Text
+from command.args.search import Search
 from command.args.word import Word

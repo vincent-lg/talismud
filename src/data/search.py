@@ -41,8 +41,10 @@ Functions:
 
 """
 
+from data.handlers.name import NameHandler
 from data.handlers.permissions import PermissionHandler
 from data.handlers.tags import TagHandler
 
+search = NameHandler.search
 search_permission = PermissionHandler.search
 search_tag = TagHandler.search

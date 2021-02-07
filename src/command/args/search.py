@@ -27,27 +27,30 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Keyword argument."""
+"""Search argument."""
 
 from typing import Optional, Union
 
 from command.args.base import ArgSpace, Argument, ArgumentError, Result
 
-class Keyword(Argument):
+class Search(Argument):
 
-    """Keyword class for argument."""
+    """Search class for argument."""
 
-    name = "keyword"
-    space = ArgSpace.STRICT
-    in_namespace = False
+    name = "search"
+    space = ArgSpace.UNKNOWN
+    in_namespace = True
+    _search = None
 
-    def __init__(self, *names, dest, optional=False, default=None):
+    def __init__(self, dest, optional=False, default=None):
         super().__init__(dest, optional=optional, default=default)
-        self.names = names
-        self.msg_cannot_find = "Can't find this argument."
+        self.search_in = None
+        self.only_one = True
+        self.msg_cannot_find = "'{search}' cannot be found."
+        self.msg_mandatory = "You should specify a name to search."
 
     def __repr__(self):
-        return f"<Keyword {'/'.join(self.names)}>"
+        return "<Search arg>"
 
     def parse(self, character: 'db.Character', string: str, begin: int = 0,
             end: Optional[int] = None) -> Union[Result, ArgumentError]:
@@ -64,14 +67,41 @@ class Keyword(Argument):
             result (Result or ArgumentError).
 
         """
-        for name in self.names:
-            if string[begin:].startswith(f"{name} "):
-                return Result(begin=begin, end=begin + len(name) + 1,
-                        string=string)
+        search = type(self)._search
+        if search is None:
+            from data.search import search
+            type(self)._search = search
 
-            pos = string.find(f" {name} ", begin)
-            if pos >= 0 and pos < end:
-                return Result(begin=begin + pos,
-                        end=begin + len(name) + 2 + pos, string=string)
+        end = len(string) if end is None else end
+        attempt = string[begin:end]
 
-        return ArgumentError(self.msg_cannot_find)
+        # Return an error if the argument is mandatory.
+        if not attempt.strip():
+            if not self.optional:
+                return ArgumentError(self.msg_mandatory)
+
+        # Try searching for the result with this name
+        search_in = self.search_in
+        if callable(search_in):
+            search_in = search_in(character)
+        found = None
+        if attempt.strip():
+            found = search(attempt, limit_to=search_in)
+
+        if not found:
+            if attempt.strip():
+                return ArgumentError(self.msg_cannot_find.format(
+                        search=attempt))
+
+        if self.only_one and found:
+            found = found[0] # Ignore the others
+
+        result = Result(begin, end, string)
+        result.value = found
+
+        return result
+
+    def add_to_namespace(self, result, namespace):
+        """Add the parsed number to the namespace."""
+        value = result.value
+        setattr(namespace, self.dest, value)

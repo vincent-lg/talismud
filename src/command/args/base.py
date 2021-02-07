@@ -72,12 +72,13 @@ class Argument(metaclass=ArgMeta):
     def __repr__(self):
         return f"<Arg {self.name}>"
 
-    def parse(self, string: str, begin: int = 0,
+    def parse(self, character: 'db.Character', string: str, begin: int = 0,
             end: Optional[int] = None) -> Union[Result, ArgumentError]:
         """
         Parse the argument.
 
         Args:
+            character (Character): the character running the command.
             string (str): the string to parse.
             begin (int): the beginning of the string to parse.
             end (int, optional): the end of the string to parse.
