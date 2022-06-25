@@ -1,4 +1,4 @@
-aiohttp==3.6.2
+aiohttp==3.8.1
 aiohttp-session==2.9.0
 async-timeout==3.0.1
 beautifultable==1.0.0
