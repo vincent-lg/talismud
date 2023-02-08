@@ -4,7 +4,7 @@ async-timeout==3.0.1
 beautifultable==1.0.0
 bui==0.2.10
 Cheetah3==3.2.5
-cryptography==3.2
+cryptography==39.0.1
 Logbook==1.5.3
 pony==0.7.13
 PyInstaller==3.6
