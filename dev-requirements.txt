@@ -6,7 +6,7 @@ behave==1.2.6
 bui==0.2.10
 Cheetah3==3.2.5
 coverage==5.3
-cryptography==3.2
+cryptography==39.0.1
 cx-Freeze==6.4.2
 Logbook==1.5.2
 pony==0.7.13
